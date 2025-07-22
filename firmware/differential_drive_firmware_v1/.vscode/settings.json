@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "string_view": "cpp",
+        "regex": "cpp"
+    },
+    "cmake.sourceDirectory": "/home/mannaja/swerve_coaxial_drive_v1/firmware/coaxial_drive_firmware_v1/.pio/libdeps/esp32/Adafruit BusIO"
+}

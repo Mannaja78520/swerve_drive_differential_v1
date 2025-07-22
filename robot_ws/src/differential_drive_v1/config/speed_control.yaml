@@ -1,0 +1,20 @@
+keyboard_control_node:
+  ros__parameters:
+    max_speed: 0.8
+    plus_move_speed: 0.25
+    plus_slide_speed: 0.25
+    plus_turn_speed: 0.5
+    plus_speed_size: 0.01
+
+robot_movement:
+  ros__parameters:
+    movement_mode: "mps"
+    max_pwm_Speed: 1023.0
+    max_rpm: 6000
+    max_linear_speed: 10.0
+    wheel_diameter: 0.762
+    gear_ratio: 10.0
+    wheel_distance: 0.3
+
+
+    
