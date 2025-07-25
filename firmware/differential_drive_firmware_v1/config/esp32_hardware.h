@@ -22,13 +22,14 @@
 #define PWM_FREQUENCY 20000                                             // PWM Frequency
 #define PWM_Max pow(2, PWM_BITS) - 1
 #define PWM_Min -PWM_Max
+#define GEAR_Ratio 1.575                                                // Midpoint of the PWM signal
 
 // #define FIRST_TCA_CHANNEL 3 // TCA9548A channel for the first AS5600 sensor
 // #define AS5600_COUNT 3 // Number of AS5600 sensors
 
 // INVERT MOTOR DIRECTIONS
 #define MOTOR1_INV false
-#define MOTOR2_INV false
+#define MOTOR2_INV true
 // #define MOTOR3_INV false
 // #define MOTOR4_INV false
 // #define MOTOR5_INV false
@@ -73,7 +74,7 @@
 // #define MOTOR6_IN_B 2
 
 // INVERT ENCODER DIRECTIONS
-#define MOTOR1_ENCODER_INV false
+#define MOTOR1_ENCODER_INV true
 #define MOTOR2_ENCODER_INV false
 // #define MOTOR3_ENCODER_INV false
 // #define MOTOR4_ENCODER_INV false

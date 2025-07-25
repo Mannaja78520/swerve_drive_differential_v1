@@ -14,7 +14,7 @@ class esp32_Encoder {
             
             {
             ESP32Encoder::useInternalWeakPullResistors = puType::up;    
-            Encoder.attachFullQuad(encoder_A, encoder_B);
+            Encoder.attachFullQuad(encoder_A_, encoder_B_);
             Encoder.setCount(0);
         }
 

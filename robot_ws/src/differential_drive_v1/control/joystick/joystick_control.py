@@ -82,8 +82,8 @@ class Joystick(Node):
         )
 
         self.gamepad = Gamepad()
-        self.maxspeed : float = 1.0
-        self.maxlinear_speed = 10.0  # m/s max
+        self.maxlinear_speed = 0.6  # m/s max
+        self.maxspeed : float = self.maxlinear_speed
         self.maxpwm_speed = 1023.0  # PWM max speed
         
 

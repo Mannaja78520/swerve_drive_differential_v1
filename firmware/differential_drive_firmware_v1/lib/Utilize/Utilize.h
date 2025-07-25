@@ -43,4 +43,9 @@ static byte SigNum(float number) {
     return (byte) (number == 0 ? 0 : (number < 0 ? -1 : 1));
 }
 
+float MPSToRPM(float mps, float wheel_diameter) {
+    return (mps * 60.0) / (PI * wheel_diameter);
+
+}
+
 #endif

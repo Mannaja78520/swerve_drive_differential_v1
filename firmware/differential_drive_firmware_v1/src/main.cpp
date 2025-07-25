@@ -76,7 +76,7 @@ rcl_publisher_t debug_move_wheel_encoder_publisher;
 rcl_subscription_t move_wheel_motor_subscriber;
 rcl_subscription_t movement_mode_subscriber;
 rcl_subscription_t cmd_vel_subscriber;
-rcl_subscription_t wheel_angle_subscriber;
+// rcl_subscription_t wheel_angle_subscriber;
 
 std_msgs__msg__String movement_mode_msg;
 
@@ -101,9 +101,13 @@ long long ticks_R_rear_left = 0;
 long long ticks_L_rear_Right = 0;
 long long ticks_R_rear_Right = 0;
 
-double angle_front =0.0;
-double angle_rear_left=0.0;
-double angle_rear_right =0.0;
+
+float angle_front =0.0;
+float angle_rear_left=0.0;
+float angle_rear_right =0.0;
+
+float rpm_front_L = 0;
+float rpm_front_R = 0;
 
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
@@ -130,20 +134,20 @@ enum states
 } state;
 
 // Adafruit_AS5600 as5600;  // One for each sensor
-PIDF pidf_wheel[3] = {
-    PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-    PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-    PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-};
+// PIDF pidf_wheel[3] = {
+//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
+//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
+//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
+// };
 
 // float servo_zero_point[3] = {CONTINUTE_SERVO1_ZERO_POINT, CONTINUTE_SERVO2_ZERO_POINT, CONTINUTE_SERVO3_ZERO_POINT}; // Zero point for each servo
 
 // Servo servo_wheel[3];
 // const int servoPins[3] = {CONTINUTE_SERVO1_PIN, CONTINUTE_SERVO2_PIN, CONTINUTE_SERVO3_PIN};
 
-PIDF motor1_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-PIDF motor2_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-PIDF motor3_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+PIDF front_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+// PIDF motor3_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
 
 // Move motor
 Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
@@ -156,11 +160,11 @@ std::vector<Controller> motorA = {motor1, motor2};
 // std::vector<Controller> motorB = {motor2, motor3}; };
 
 
-PIDF Angle_Wheel1_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-PIDF Angle_Wheel2_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-PIDF Angle_Wheel3_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+PIDF Angle_Wheel1_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
+PIDF Angle_Wheel2_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
+PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
 
-DifferentialSwerveModule module_front(COUNTS_PER_REV1, 4.5, 45.0, 10.0);
+DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
 DifferentialSwerveModule module_rear_left(0.0, 0.0, 0.0, 0.0);
 DifferentialSwerveModule module_rear_right(0.0, 0.0, 0.0, 0.0);
 // Move Encoder
@@ -305,26 +309,28 @@ void loop()
 
 //------------------------------ < Fuction > -------------------------------------//
 
-double L = 0.3;
-std::vector<std::pair<double, double>> wheel_positions = {
+float L = 0.3;
+std::vector<std::pair<float, float>> wheel_positions = {
     {L, 0},                                     // Wheel 1: front
     {-L / 2, std::sqrt(3) * L / 2},             // Wheel 2: rear-left
     {-L / 2, -std::sqrt(3) * L / 2}             // Wheel 3: rear-right
 };
 
-    std::vector<std::pair<double, double>> kinematics(float Vx, float Vy, float omega) {
-    std::vector<std::pair<double, double>> motor_speeds;
+    std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) {
+    std::vector<std::pair<float, float>> motor_speeds;
 
     for (size_t idx = 0; idx < wheel_positions.size(); ++idx) {
-        double x = wheel_positions[idx].first;
-        double y = wheel_positions[idx].second;
+        float x = wheel_positions[idx].first;
+        float y = wheel_positions[idx].second;
 
-        double vix = Vx - omega * y;
-        double viy = Vy + omega * x;
+        float vix = Vx - omega * y;
+        float viy = Vy + omega * x;
 
-        double speed = hypot(vix, viy);
-        double angle = atan2(viy, vix);
-
+        float speed = hypot(vix, viy);
+        float angle = viy == 0 && vix == 0 ? 0: atan2(viy, vix);
+        
+        // debug_wheel_encoder_msg.angular.x = vix;
+        // debug_wheel_encoder_msg.angular.y = viy;
 
         motor_speeds.push_back({speed, angle});
     }
@@ -332,6 +338,16 @@ std::vector<std::pair<double, double>> wheel_positions = {
     return motor_speeds;
 }
  
+float normalize_PWM(float PWM) {
+
+    if (PWM > PWM_Max) {
+        return PWM_Max;
+    } else if (PWM < -PWM_Max) {
+        return -PWM_Max;
+    } else {
+        return PWM;
+    }
+}
 
 void calculate_Stering() {
     ticks_L_front = Encoder1.read();
@@ -343,8 +359,8 @@ void calculate_Stering() {
 
 
    // อัพเดตองศาแต่ละล้อ
-    module_front.update_angle(ticks_L_front, ticks_R_front);
-    // module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
+    module_front.update_angle(ticks_R_front, ticks_L_front);
+    // module_rear_left.update_angle(ticks_L_rear_left, ticks_R_r   ear_left);
     // module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
 
     // รับค่าองศาปัจจุบันของแต่ละล้อ
@@ -352,23 +368,36 @@ void calculate_Stering() {
     angle_rear_left = module_rear_left.get_current_angle();
     angle_rear_right = module_rear_right.get_current_angle();
 
+
+
     auto motor = kinematics(V_x, V_y, Omega_z);
 
-        double speed1 = motor[0].first;
-        double Angle1 = Angle_Wheel1_pidf.compute(motor[0].second, angle_front); 
+    float speed_front_L_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
+    float speed_front_R_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
+    // float speed3_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    
+    float angle1_correction = Angle_Wheel1_pidf.compute(motor[0].second, angle_front);
+    float angle2_correction = Angle_Wheel2_pidf.compute(motor[1].second, angle_rear_left);
+    float angle3_correction = Angle_Wheel3_pidf.compute(motor[2].second, angle_rear_right);
 
-        double speed2 = motor[1].first;
-        double Angle2 = Angle_Wheel2_pidf.compute(motor[1].second, angle_rear_left);
+    float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
+    float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
 
-        double speed3 = motor[2].first;
-        double Angle3 = Angle_Wheel3_pidf.compute(motor[2].second, angle_rear_right);
+    float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
+    float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
 
-    MovePower(V_x + V_y, V_x - V_y, 
-              speed2 + Angle2, speed2 - Angle2,
-              speed3 + Angle3, speed3 - Angle3);
+    float front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
+    float front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
 
-    debug_wheel_encoder_msg.angular.x = V_x;
-    debug_wheel_encoder_msg.angular.y = V_y;
+
+    MovePower(front_L_speed , front_R_speed,
+              0, 0,
+              0, 0);
+
+    debug_wheel_encoder_msg.angular.x = front_L_speed;
+    debug_wheel_encoder_msg.angular.y = front_R_speed;
+    debug_wheel_encoder_msg.angular.z = speed_front_L_pwm;
+    // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
 
@@ -389,8 +418,8 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
     RCLC_UNUSED(last_call_time);
     if (timer != NULL)
     {
-        calculate_Stering();
         getEncoderData();
+        calculate_Stering();
         // Move();
         // if (movement_mode == "rpm"){
         //     MoveRPM();
@@ -434,15 +463,6 @@ void movementModeCallback(const void *msgin)
 //     // Seriencoder_rpmal.println(msg->data.data);
 }
 
-// void wheelAngleCallback(const void *msgin)
-// {
-    // prev_cmd_time = millis();
-    // const geometry_msgs__msg__Twist *msg = (const geometry_msgs__msg__Twist *)msgin;
-    // wheel_angle_msg = *msg;
-    // const geometry_msgs__msg__Twist *msg = (const geometry_msgs__msg__Twist *)msgin;
-    // Copy the wheel angles to global variable
-    // wheel_angle_msg = *msg;
-// }
 
 bool createEntities()
 {
@@ -455,7 +475,7 @@ bool createEntities()
     rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator);
 
     // create node
-    RCCHECK(rclc_node_init_default(&node, "coaxial_swerve_basemove_hardware", "", &support));
+    RCCHECK(rclc_node_init_default(&node, "differential_swerve_basemove_hardware", "", &support));
 
     // Pub
     RCCHECK(rclc_publisher_init_best_effort(
@@ -503,14 +523,14 @@ bool createEntities()
     //     "/wheel/angle"));
 
     // create timer for actuating the motors at 50 Hz (1000/20)
-    const unsigned int control_timeout = 40;
+    const unsigned int control_timeout = 90;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,
         RCL_MS_TO_NS(control_timeout),
         controlCallback));
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
     
     RCCHECK(rclc_executor_add_subscription(
         &executor,
@@ -572,8 +592,8 @@ void Move()
 // {
 //     // Convert the linear.x, linear.y, and linear.z to RPM for each motor
 //     // Set the RPM for each motor
-//     float motor1Speed = motor1_pidf.compute(motor1_target, debug_wheel_encoder_msg.linear.x);
-//     float motor2Speed = motor2_pidf.compute(motor2_target, debug_wheel_encoder_msg.linear.y);
+//     float motor1Speed = front_L_pidf.compute(motor1_target, debug_wheel_encoder_msg.linear.x);
+//     float motor2Speed = front_R_pidf.compute(motor2_target, debug_wheel_encoder_msg.linear.y);
 //     // float motor3Speed = motor3_pidf.compute(motor3_target, debug_wheel_encoder_msg.linear.z);
 //     MovePower(motor1Speed, motor2Speed, );
 // }
@@ -608,8 +628,10 @@ void Move()
 void getEncoderData()
 {
     // Get encoder data
-    debug_wheel_encoder_msg.linear.x = Encoder1.getRPM();
-    debug_wheel_encoder_msg.linear.y = Encoder2.getRPM();
+    rpm_front_L = Encoder1.getRPM();
+    rpm_front_R = Encoder2.getRPM();
+    debug_wheel_encoder_msg.linear.x = rpm_front_L;
+    debug_wheel_encoder_msg.linear.y = rpm_front_R;
     // debug_wheel_encoder_msg.linear.z = 0.0;
     // debug_wheel_encoder_msg.linear.z = Encoder3.getRPM();
 
