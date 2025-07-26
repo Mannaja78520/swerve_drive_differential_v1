@@ -131,4 +131,7 @@
 #define SCL_PIN 22
 #define SDA_PIN 21
 
+#define Hall_Sensor1 12
+// #define Hall_Sensor2 14
+// #define HALL_SENSOR_PIN 13 // Pin for the Hall effect sensor
 #endif

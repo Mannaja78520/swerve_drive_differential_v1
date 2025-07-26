@@ -14,6 +14,7 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 
+#include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/string.h>
 #include <geometry_msgs/msg/twist.h>
 
@@ -25,7 +26,8 @@
 // #include <Adafruit_AS5600.h>
 #include <Utilize.h>
 // #include <TCA9548A.h>
-#include <differential_swerve_module.h>
+#include <differential_swerve_module/differential_swerve_module.h>
+
 
 #if defined(ESP32)
     #include <esp32_Encoder.h>    
@@ -36,6 +38,7 @@
 #endif
 
 
+#define HALL_SENSOR_PIN 12
 
 #define RCCHECK(fn)                  \
     {                                \
@@ -69,6 +72,7 @@
 
 //------------------------------ < Define > -------------------------------------//
 
+rcl_publisher_t hall_publisher;
 rcl_publisher_t debug_move_wheel_motor_publisher;
 rcl_publisher_t debug_move_wheel_encoder_publisher;
 // rcl_publisher_t debug_move_wheel_angle_publisher;
@@ -79,6 +83,7 @@ rcl_subscription_t cmd_vel_subscriber;
 // rcl_subscription_t wheel_angle_subscriber;
 
 std_msgs__msg__String movement_mode_msg;
+std_msgs__msg__Bool hall_msg;
 
 geometry_msgs__msg__Twist debug_wheel_motor_msg;
 geometry_msgs__msg__Twist debug_wheel_encoder_msg;
@@ -201,7 +206,6 @@ void setup()
 {
 
     Serial.begin(115200);
-    pinMode(LED_BUILTIN, OUTPUT);
     #if defined(ESP32)
         // tca.begin();
 
@@ -254,7 +258,7 @@ void setup()
 
 void loop()
 {
-
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
     #ifdef MICROROS_WIFI
         if (WiFi.status() != WL_CONNECTED) {
             WiFi.begin((char*)SSID, (char*)SSID_PW);
@@ -411,6 +415,14 @@ void MovePower(float Motor1Speed, float Motor2Speed, float Motor3Speed, float Mo
 
     // motor5.spin(Motor5Speed);
     // motor6.spin(Motor6Speed);  
+}
+
+
+void timer_callback(rcl_timer_t *, int64_t)
+{
+  // เซนเซอร์ A3144 จะให้สัญญาณ LOW เมื่อมีแม่เหล็ก
+  hall_msg.data = (digitalRead(HALL_SENSOR_PIN) == LOW);
+  rcl_publish(&hall_publisher, &hall_msg, NULL);
 }
 
 void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
