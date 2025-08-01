@@ -81,6 +81,10 @@ class Joystick(Node):
             Joy, '/joy', self.joy, qos_profile=qos.qos_profile_sensor_data # 10
         )
 
+        self.Servo_move = self.create_publisher(
+            Twist, '/servo_position', qos_profile=qos.qos_profile_system_default
+        )
+
         self.gamepad = Gamepad()
         self.maxlinear_speed = 0.6  # m/s max
         self.maxspeed : float = self.maxlinear_speed
@@ -104,6 +108,22 @@ class Joystick(Node):
             self.maxspeed = self.maxlinear_speed
             self.move_mode_pub.publish(mode_msg)
             self.get_logger().info(f"Movement mode set to autonomous max speed is {self.maxlinear_speed}.")
+
+    def update_servo_position(self):
+        """Updates the servo position based on the joystick input."""
+        servo_msg = Twist()
+        
+        if self.gamepad.button_triangle == 1.0:
+            self.get_logger().info(f"R1 pressed - setting servo to 180")
+            servo_msg.linear.x = float(270.0)
+            servo_msg.angular.x = float(180.0)
+            self.Servo_move.publish(servo_msg)
+
+        elif self.gamepad.button_cross == 1.0:
+            self.get_logger().info(f"L1 pressed - setting servo to 0")
+            servo_msg.linear.x = float(0.0)
+            servo_msg.angular.x = float(0.0)
+            self.Servo_move.publish(servo_msg)
 
     def update_speeds(self, joy):
         # Adjust movement, sliding, and turning speeds
@@ -153,6 +173,7 @@ class Joystick(Node):
         self.gamepad.PressedRightAnalog = float(msg.buttons[12])    # 12:
         
         self.update_mode()
+        self.update_servo_position()
         
 
     def sendData(self):

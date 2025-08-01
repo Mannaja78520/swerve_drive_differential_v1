@@ -51,9 +51,11 @@ float PIDF::compute_with_error(float error) {
   if(i_min != -1 && i_max != -1) Integral = constrain(Integral, this->i_min, this->i_max);
   // float Derivative = (Error - LastError) / Dt;
   float Derivative = error - LastError;
-  if (Setpoint == 0 && error == 0) {
-    Integral = 0;
-    Derivative = 0;
+  if (Setpoint == 0) {
+    if (Kf > 0 || error == 0) {
+      Integral = 0;
+      Derivative = 0;
+    }
   } 
   LastError = error;
   // Serial.println("Error: " + String(Error, 2) + " | Integral: " + String(Integral, 2) + " | Derivative: " + String(Derivative, 2));

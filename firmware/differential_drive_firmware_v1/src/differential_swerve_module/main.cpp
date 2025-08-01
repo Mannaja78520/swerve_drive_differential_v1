@@ -1,7 +1,4 @@
 #include <Arduino.h>
-// #include <Wire.h>
-// #include <SPI.h>
-
 #include <micro_ros_platformio.h>
 #include <stdio.h>
 
@@ -21,24 +18,14 @@
 #include <config.h>
 #include <motor.h>
 #include <PIDF.h>
-// #include <esp32_hardware.h>
-// #include <Adafruit_I2CDevice.h>
-// #include <Adafruit_AS5600.h>
 #include <Utilize.h>
-// #include <TCA9548A.h>
 #include <differential_swerve_module/differential_swerve_module.h>
 
 
-#if defined(ESP32)
-    #include <esp32_Encoder.h>    
-    // #include <ESP32Servo.h>
-#else
-    // #include<Servo.h>
-    #include <Encoder.h>
-#endif
+#include <esp32_Encoder.h>    
+#include <ESP32Servo.h>
 
 
-#define HALL_SENSOR_PIN 12
 
 #define RCCHECK(fn)                  \
     {                                \
@@ -48,14 +35,14 @@
             rclErrorLoop();          \
         }                            \
     }
-#define RCSOFTCHECK(fn)              \
+    #define RCSOFTCHECK(fn)              \
     {                                \
         rcl_ret_t temp_rc = fn;      \
         if ((temp_rc != RCL_RET_OK)) \
         {                            \
         }                            \
     }
-#define EXECUTE_EVERY_N_MS(MS, X)          \
+    #define EXECUTE_EVERY_N_MS(MS, X)          \
     do                                     \
     {                                      \
         static volatile int64_t init = -1; \
@@ -69,43 +56,45 @@
             init = uxr_millis();           \
         }                                  \
     } while (0)
-
-//------------------------------ < Define > -------------------------------------//
-
-rcl_publisher_t hall_publisher;
-rcl_publisher_t debug_move_wheel_motor_publisher;
-rcl_publisher_t debug_move_wheel_encoder_publisher;
-// rcl_publisher_t debug_move_wheel_angle_publisher;
-
-rcl_subscription_t move_wheel_motor_subscriber;
-rcl_subscription_t movement_mode_subscriber;
-rcl_subscription_t cmd_vel_subscriber;
-// rcl_subscription_t wheel_angle_subscriber;
-
-std_msgs__msg__String movement_mode_msg;
-std_msgs__msg__Bool hall_msg;
-
-geometry_msgs__msg__Twist debug_wheel_motor_msg;
-geometry_msgs__msg__Twist debug_wheel_encoder_msg;
-geometry_msgs__msg__Twist debug_wheel_angle_msg;
-geometry_msgs__msg__Twist moveMotor_msg;
-geometry_msgs__msg__Twist cmd_vel_msg;
-geometry_msgs__msg__Twist wheel_angle_msg;
-
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
-rcl_timer_t control_timer;
-rcl_init_options_t init_options;
-
-long long ticks_L_front = 0;
-long long ticks_R_front = 0;
-long long ticks_L_rear_left = 0;
-long long ticks_R_rear_left = 0;
-long long ticks_L_rear_Right = 0;
-long long ticks_R_rear_Right = 0;
-
+    
+    //------------------------------ < Define > -------------------------------------//
+    
+    rcl_publisher_t hall_publisher;
+    rcl_publisher_t debug_move_wheel_motor_publisher;
+    rcl_publisher_t debug_move_wheel_encoder_publisher;
+    // rcl_publisher_t debug_move_wheel_angle_publisher;
+    
+    rcl_subscription_t move_wheel_motor_subscriber;
+    rcl_subscription_t movement_mode_subscriber;
+    rcl_subscription_t cmd_vel_subscriber;
+    rcl_subscription_t arm_position_servo_subscriber;
+    // rcl_subscription_t wheel_angle_subscriber;
+    
+    std_msgs__msg__String movement_mode_msg;
+    std_msgs__msg__Bool hall_msg;
+    
+    geometry_msgs__msg__Twist debug_wheel_motor_msg;
+    geometry_msgs__msg__Twist debug_wheel_encoder_msg;
+    geometry_msgs__msg__Twist debug_wheel_angle_msg;
+    geometry_msgs__msg__Twist moveMotor_msg;
+    geometry_msgs__msg__Twist arm_pos_msg;
+    geometry_msgs__msg__Twist cmd_vel_msg;
+    geometry_msgs__msg__Twist wheel_angle_msg;
+    
+    rclc_executor_t executor;
+    rclc_support_t support;
+    rcl_allocator_t allocator;
+    rcl_node_t node;
+    rcl_timer_t control_timer;
+    rcl_init_options_t init_options;
+    
+    long long ticks_L_front = 0;
+    long long ticks_R_front = 0;
+    long long ticks_L_rear_left = 0;
+    long long ticks_R_rear_left = 0;
+    long long ticks_L_rear_Right = 0;
+    long long ticks_R_rear_Right = 0;
+    
 
 float angle_front =0.0;
 float angle_rear_left=0.0;
@@ -138,18 +127,6 @@ enum states
     AGENT_DISCONNECTED
 } state;
 
-// Adafruit_AS5600 as5600;  // One for each sensor
-// PIDF pidf_wheel[3] = {
-//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-//     PIDF(Servo_Motor_MinSpeed, Servo_Motor_MaxSpeed, Servo_Motor_KP, Servo_Motor_KI, Servo_Motor_I_Min, Servo_Motor_I_Max, Servo_Motor_KD, Servo_Motor_KF, Servo_Motor_ERROR_TOLERANCE),
-// };
-
-// float servo_zero_point[3] = {CONTINUTE_SERVO1_ZERO_POINT, CONTINUTE_SERVO2_ZERO_POINT, CONTINUTE_SERVO3_ZERO_POINT}; // Zero point for each servo
-
-// Servo servo_wheel[3];
-// const int servoPins[3] = {CONTINUTE_SERVO1_PIN, CONTINUTE_SERVO2_PIN, CONTINUTE_SERVO3_PIN};
-
 PIDF front_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
 PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
 // PIDF motor3_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
@@ -169,21 +146,17 @@ PIDF Angle_Wheel1_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_K
 PIDF Angle_Wheel2_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
 PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
 
+Servo Arm_Servo[2];
+
+const int servoPins[2] = {SERVO1_PIN, SERVO2_PIN};
+
 DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
 DifferentialSwerveModule module_rear_left(0.0, 0.0, 0.0, 0.0);
 DifferentialSwerveModule module_rear_right(0.0, 0.0, 0.0, 0.0);
 // Move Encoder
-#if defined(ESP32)
-    esp32_Encoder Encoder1(MOTOR1_ENCODER_PIN_A, MOTOR1_ENCODER_PIN_B, COUNTS_PER_REV1, MOTOR1_ENCODER_INV, MOTOR1_ENCODER_RATIO);
-    esp32_Encoder Encoder2(MOTOR2_ENCODER_PIN_A, MOTOR2_ENCODER_PIN_B, COUNTS_PER_REV2, MOTOR2_ENCODER_INV, MOTOR2_ENCODER_RATIO);
-    // esp32_Encoder Encoder3(MOTOR3_ENCODER_PIN_A, MOTOR3_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV, MOTOR3_ENCODER_RATIO);
-#else
-    Encoder Encoder1(MOTOR1_ENCODER_PIN_A, MOTOR1_ENCODER_PIN_B, COUNTS_PER_REV1, MOTOR1_ENCODER_INV, MOTOR1_ENCODER_RATIO);
-    Encoder Encoder2(MOTOR2_ENCODER_PIN_A, MOTOR2_ENCODER_PIN_B, COUNTS_PER_REV2, MOTOR2_ENCODER_INV, MOTOR2_ENCODER_RATIO);
-    Encoder Encoder3(MOTOR3_ENCODER_PIN_A, MOTOR3_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV, MOTOR3_ENCODER_RATIO);
-#endif
-
-// TCA9548A tca;
+esp32_Encoder Encoder1(MOTOR1_ENCODER_PIN_A, MOTOR1_ENCODER_PIN_B, COUNTS_PER_REV1, MOTOR1_ENCODER_INV, MOTOR1_ENCODER_RATIO);
+esp32_Encoder Encoder2(MOTOR2_ENCODER_PIN_A, MOTOR2_ENCODER_PIN_B, COUNTS_PER_REV2, MOTOR2_ENCODER_INV, MOTOR2_ENCODER_RATIO);
+// esp32_Encoder Encoder3(MOTOR3_ENCODER_PIN_A, MOTOR3_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV, MOTOR3_ENCODER_RATIO);
 //------------------------------ < Fuction Prototype > ------------------------------//
 
 void rclErrorLoop();
@@ -206,53 +179,20 @@ void setup()
 {
 
     Serial.begin(115200);
-    #if defined(ESP32)
-        // tca.begin();
-
-        // for (int i = 0; i < AS5600_COUNT; i++) {
-
-        //     if (!tca.selectChannel(FIRST_TCA_CHANNEL + i)) {
-        //         Serial.print("Failed to select TCA channel ");
-        //         Serial.println(FIRST_TCA_CHANNEL + i);
-        //         continue;
-        //     }
-
-        //     if (!as5600.begin()) {
-        //         Serial.print("AS5600 ");
-        //         Serial.print(i);
-        //         Serial.println(" not found!");
-        //         continue;
-        //     }
-
-        //     // You can configure each individually if needed
-        //     as5600.setPowerMode(AS5600_POWER_MODE_NOM);
-        //     as5600.setHysteresis(AS5600_HYSTERESIS_OFF);
-        //     as5600.setOutputStage(AS5600_OUTPUT_STAGE_ANALOG_FULL);
-        //     as5600.setSlowFilter(AS5600_SLOW_FILTER_16X);
-        //     as5600.setFastFilterThresh(AS5600_FAST_FILTER_THRESH_SLOW_ONLY);
-        //     as5600.setZPosition(0);
-        //     as5600.setMPosition(4095);
-        //     as5600.setMaxAngle(4095);
-        // }
-
-        // ESP32PWM::allocateTimer(0);
-        // ESP32PWM::allocateTimer(1);
-        // ESP32PWM::allocateTimer(2);
-
-        // for (int i = 0; i < 3; i++) {
-        //     servo_wheel[i].setPeriodHertz(50);
-        //     servo_wheel[i].attach(servoPins[i], 500, 2500);
-        //     servo_wheel[i].write(90);
-        // }
-        // Serial.println("Initializing micro-ROS transport...");
-        
-        #endif
+    // pinMode(Hall_Sensor1, INPUT_PULLUP);
     #ifdef MICROROS_WIFI
+        
         IPAddress agent_ip(AGENT_IP);
         uint16_t agent_port = AGENT_PORT;
         set_microros_wifi_transports((char*)SSID, (char*)SSID_PW, agent_ip, agent_port);
     #else
         set_microros_serial_transports(Serial);
+        for (int i = 0; i < 2; i++) {
+
+            Arm_Servo[i].setPeriodHertz(50);
+            Arm_Servo[i].attach(servoPins[i], 500, 2500);
+            Arm_Servo[i].write(0);
+        }
     #endif
 }
 
@@ -320,8 +260,8 @@ std::vector<std::pair<float, float>> wheel_positions = {
     {-L / 2, -std::sqrt(3) * L / 2}             // Wheel 3: rear-right
 };
 
-    std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) {
-    std::vector<std::pair<float, float>> motor_speeds;
+std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) {
+std::vector<std::pair<float, float>> motor_speeds;
 
     for (size_t idx = 0; idx < wheel_positions.size(); ++idx) {
         float x = wheel_positions[idx].first;
@@ -332,6 +272,21 @@ std::vector<std::pair<float, float>> wheel_positions = {
 
         float speed = hypot(vix, viy);
         float angle = viy == 0 && vix == 0 ? 0: atan2(viy, vix);
+        if (Vx < 0.0){
+            speed = -speed; // Adjust speed direction based on Vx
+            if (Vx < 0.0 && Vy < 0.0)  // If both Vx and Vy are negative
+            {
+                angle = angle + M_PI;
+            }
+            if (Vx < 0.0 && Vy > 0.0)  // If Vx is positive and Vy is negative
+            {
+                angle = angle - M_PI;
+            }  
+        }
+        if (angle > M_PI)  // If both Vx and Vy are negative
+        {
+            angle = 0.0;
+        }
         
         // debug_wheel_encoder_msg.angular.x = vix;
         // debug_wheel_encoder_msg.angular.y = viy;
@@ -376,11 +331,12 @@ void calculate_Stering() {
 
     auto motor = kinematics(V_x, V_y, Omega_z);
 
+
     float speed_front_L_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
     float speed_front_R_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
     // float speed3_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
     
-    float angle1_correction = Angle_Wheel1_pidf.compute(motor[0].second, angle_front);
+    float angle1_correction = Angle_Wheel1_pidf.compute(motor[0].second * (180.0 / M_PI), angle_front );
     float angle2_correction = Angle_Wheel2_pidf.compute(motor[1].second, angle_rear_left);
     float angle3_correction = Angle_Wheel3_pidf.compute(motor[2].second, angle_rear_right);
 
@@ -398,9 +354,12 @@ void calculate_Stering() {
               0, 0,
               0, 0);
 
-    debug_wheel_encoder_msg.angular.x = front_L_speed;
-    debug_wheel_encoder_msg.angular.y = front_R_speed;
-    debug_wheel_encoder_msg.angular.z = speed_front_L_pwm;
+    // debug_wheel_encoder_msg.angular.x = front_L_speed;
+    debug_wheel_encoder_msg.linear.x = motor[0].first;
+    debug_wheel_encoder_msg.linear.z = motor[0].second * (180.0 / M_PI);
+    debug_wheel_encoder_msg.linear.y = angle1_correction;
+    debug_wheel_encoder_msg.angular.x = angle_front ;
+    // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
     // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
@@ -416,14 +375,35 @@ void MovePower(float Motor1Speed, float Motor2Speed, float Motor3Speed, float Mo
     // motor5.spin(Motor5Speed);
     // motor6.spin(Motor6Speed);  
 }
+void Arm_position(const void * msgin){
+    
+    const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
+    arm_pos_msg = *msg;
+
+    float MainArm = arm_pos_msg.linear.x; // Main Arm Position
+    float SubArm = arm_pos_msg.angular.x; // Sub Arm Position
+
+    Serial.print("MainArm: ");
+    Serial.print(MainArm);
+    Serial.print(" | SubArm: ");
+    Serial.println(SubArm);
 
 
-void timer_callback(rcl_timer_t *, int64_t)
-{
-  // เซนเซอร์ A3144 จะให้สัญญาณ LOW เมื่อมีแม่เหล็ก
-  hall_msg.data = (digitalRead(HALL_SENSOR_PIN) == LOW);
-  rcl_publish(&hall_publisher, &hall_msg, NULL);
+    int Pos_main_arm = map(MainArm, 0, 270, 500, 2500); // convert to 0 - 270 degrees to 500 - 2500 pulse 
+    int Pos_sub_arm = map(SubArm, 0, 180, 480, 2580); // convert to 0 - 270 degrees to 480 - 2580 pulse
+
+    Arm_Servo[0].writeMicroseconds(Pos_main_arm); // write the pulse to servo
+    Arm_Servo[1].writeMicroseconds(Pos_sub_arm); // write the pulse
+
+    
 }
+
+// void timer_callback(rcl_timer_t *, int64_t)
+// {
+//   // เซนเซอร์ A3144 จะให้สัญญาณ LOW เมื่อมีแม่เหล็ก
+//   hall_msg.data = (digitalRead(Hall_Sensor1) == LOW);
+//   rcl_publish(&hall_publisher, &hall_msg, NULL);
+// }
 
 void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
 {
@@ -432,17 +412,7 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
     {
         getEncoderData();
         calculate_Stering();
-        // Move();
-        // if (movement_mode == "rpm"){
-        //     MoveRPM();
-        // }
-        // else if (movement_mode == "manual"){
-        // }
-        // RotageWheel();
         publishData();
-        // if (millis() - last_pub > 200) { // Every 200ms
-        //     last_pub = millis();
-        // }
     }
 }
 
@@ -460,7 +430,6 @@ void wheelMoveCallback(const void *msgin)
     motor1_target = moveMotor_msg.linear.x;
     motor2_target = moveMotor_msg.linear.y;
     motor3_target = moveMotor_msg.linear.z;
-    // motor1.spin(motor1_target);
 }
 
 void movementModeCallback(const void *msgin)
@@ -468,11 +437,6 @@ void movementModeCallback(const void *msgin)
     prev_cmd_time = millis();
     const std_msgs__msg__String *msg = (const std_msgs__msg__String *)msgin;
     movement_mode = movement_mode_msg.data.data;  // Copy it to global for later use
-    // const std_msgs__msg__String *msg = (const std_msgs__msg__String *)msgin;
-    // movement_mode = String(msg->data.data);
-    // Example: Print mode (optional)
-//     // Serial.print("Movement Mode: ");
-//     // Seriencoder_rpmal.println(msg->data.data);
 }
 
 
@@ -511,6 +475,12 @@ bool createEntities()
     // Sub
 
     RCCHECK(rclc_subscription_init_default(
+        &arm_position_servo_subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "/servo_position"));
+
+    RCCHECK(rclc_subscription_init_default(
         &move_wheel_motor_subscriber,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
@@ -542,7 +512,7 @@ bool createEntities()
         RCL_MS_TO_NS(control_timeout),
         controlCallback));
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
     
     RCCHECK(rclc_executor_add_subscription(
         &executor,
@@ -557,6 +527,13 @@ bool createEntities()
         &moveMotor_msg,
         &wheelMoveCallback,
         ON_NEW_DATA));
+
+    RCCHECK(rclc_executor_add_subscription(
+        &executor,
+        &arm_position_servo_subscriber,
+        &arm_pos_msg,
+        &Arm_position,
+        ON_NEW_DATA));
     RCCHECK(rclc_executor_add_timer(&executor, &control_timer));
 
     RCCHECK(rclc_executor_add_subscription(
@@ -565,13 +542,6 @@ bool createEntities()
         &movement_mode_msg,
         &movementModeCallback,
         ON_NEW_DATA));
-
-    // RCCHECK(rclc_executor_add_subscription(
-    //     &executor,
-    //     &wheel_angle_subscriber,
-    //     &wheel_angle_msg,
-    //     &wheelAngleCallback,
-    //     ON_NEW_DATA));
 
     // synchronize time with the agent
     syncTime();
@@ -600,50 +570,13 @@ void Move()
     MovePower(motor1_target, motor2_target, motor3_target, 0.0, 0.0, 0.0);
 }
 
-// void MoveRPM()
-// {
-//     // Convert the linear.x, linear.y, and linear.z to RPM for each motor
-//     // Set the RPM for each motor
-//     float motor1Speed = front_L_pidf.compute(motor1_target, debug_wheel_encoder_msg.linear.x);
-//     float motor2Speed = front_R_pidf.compute(motor2_target, debug_wheel_encoder_msg.linear.y);
-//     // float motor3Speed = motor3_pidf.compute(motor3_target, debug_wheel_encoder_msg.linear.z);
-//     MovePower(motor1Speed, motor2Speed, );
-// }
-
-// void RotageWheel()
-// {
-//     float targetAngles[3] = {
-//         WrapDegs(wheel_angle_msg.linear.x),
-//         WrapDegs(wheel_angle_msg.linear.y),
-//         WrapDegs(wheel_angle_msg.linear.z)
-//     };
-
-//     for (int i = 0; i < AS5600_COUNT; i++) {
-//         int tca_channel = i + FIRST_TCA_CHANNEL;
-//         tca.selectChannel(tca_channel);
-//         uint16_t raw = as5600.getAngle();
-//         if (raw == 0xFFFF) continue;
-//         float currentAngle = WrapDegs(WrapDegs(raw * 360.0 / 4096.0) + servo_zero_point[i]);
-//         float error = WrapDegs(targetAngles[i] - currentAngle);
-//         float output = pidf_wheel[i].compute_with_error(error);
-//         float pulse = 1500 + output;
-        
-//         pulse = constrain(pulse, 500, 2500);
-//         servo_wheel[i].writeMicroseconds(pulse);
-//         if (i == 0) debug_wheel_angle_msg.linear.x = currentAngle;
-//         else if (i == 1) debug_wheel_angle_msg.linear.y = currentAngle;
-//         else if (i == 2) debug_wheel_angle_msg.linear.z = currentAngle;
-
-//     }
-// }
-
 void getEncoderData()
 {
     // Get encoder data
     rpm_front_L = Encoder1.getRPM();
     rpm_front_R = Encoder2.getRPM();
-    debug_wheel_encoder_msg.linear.x = rpm_front_L;
-    debug_wheel_encoder_msg.linear.y = rpm_front_R;
+    // debug_wheel_encoder_msg.linear.x = rpm_front_L;
+    // debug_wheel_encoder_msg.linear.y = rpm_front_R;
     // debug_wheel_encoder_msg.linear.z = 0.0;
     // debug_wheel_encoder_msg.linear.z = Encoder3.getRPM();
 

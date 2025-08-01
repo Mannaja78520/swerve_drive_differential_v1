@@ -137,6 +137,7 @@ class Controller
         driver motor_driver_;
         int pwm_pin_, motor_pinA_, motor_pinB_, pwm_bits_;
         bool brakemotor_;
+
 };
 
 #endif

@@ -45,13 +45,13 @@
 
 // Motor 1 Parameters
 #define MOTOR1_PWM  -1
-#define MOTOR1_IN_A 23
-#define MOTOR1_IN_B 22
+#define MOTOR1_IN_A 18
+#define MOTOR1_IN_B 19
 
 // Motor 2 Parameters
 #define MOTOR2_PWM  -1
-#define MOTOR2_IN_A 19
-#define MOTOR2_IN_B 18
+#define MOTOR2_IN_A 22
+#define MOTOR2_IN_B 23
 
 // Motor 3 Parameters
 // #define MOTOR3_PWM  -1
@@ -83,14 +83,14 @@
 
 // Encoder 1 Parameter
 #define MOTOR1_ENCODER_INCRIMENT -1
-#define MOTOR1_ENCODER_PIN_A 25
-#define MOTOR1_ENCODER_PIN_B 26
+#define MOTOR1_ENCODER_PIN_A 32
+#define MOTOR1_ENCODER_PIN_B 33
 #define MOTOR1_ENCODER_RATIO 1
 
 // Encoder 2 Parameter
 #define MOTOR2_ENCODER_INCRIMENT -1
-#define MOTOR2_ENCODER_PIN_A 32
-#define MOTOR2_ENCODER_PIN_B 33
+#define MOTOR2_ENCODER_PIN_A 25
+#define MOTOR2_ENCODER_PIN_B 26
 #define MOTOR2_ENCODER_RATIO 1
 
 // Encoder 3 Parameter
@@ -118,9 +118,10 @@
 // #define MOTOR6_ENCODER_RATIO 1
 
 // // Servo Parameter
-// #define CONTINUTE_SERVO1_PIN 13
-// #define CONTINUTE_SERVO2_PIN 12
-// #define CONTINUTE_SERVO3_PIN 15
+#define SERVO1_PIN 13
+#define SERVO2_PIN 12
+
+
 
 // // Servo Zero Point
 // #define CONTINUTE_SERVO1_ZERO_POINT 0
@@ -131,7 +132,7 @@
 #define SCL_PIN 22
 #define SDA_PIN 21
 
-#define Hall_Sensor1 12
+// #define Hall_Sensor1 12
 // #define Hall_Sensor2 14
 // #define HALL_SENSOR_PIN 13 // Pin for the Hall effect sensor
 #endif
