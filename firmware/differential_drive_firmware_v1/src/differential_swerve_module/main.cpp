@@ -59,9 +59,10 @@
     
     //------------------------------ < Define > -------------------------------------//
     
-    rcl_publisher_t hall_publisher;
+    rcl_publisher_t debug_hall_sensor_publisher;
     rcl_publisher_t debug_move_wheel_motor_publisher;
     rcl_publisher_t debug_move_wheel_encoder_publisher;
+    rcl_publisher_t debug_hall_sensor_publisher;
     // rcl_publisher_t debug_move_wheel_angle_publisher;
     
     rcl_subscription_t move_wheel_motor_subscriber;
@@ -71,7 +72,7 @@
     // rcl_subscription_t wheel_angle_subscriber;
     
     std_msgs__msg__String movement_mode_msg;
-    std_msgs__msg__Bool hall_msg;
+    std_msgs__msg__Bool hall_sensor_msg;
     
     geometry_msgs__msg__Twist debug_wheel_motor_msg;
     geometry_msgs__msg__Twist debug_wheel_encoder_msg;
@@ -272,21 +273,7 @@ std::vector<std::pair<float, float>> motor_speeds;
 
         float speed = hypot(vix, viy);
         float angle = viy == 0 && vix == 0 ? 0: atan2(viy, vix);
-        if (Vx < 0.0){
-            speed = -speed; // Adjust speed direction based on Vx
-            if (Vx < 0.0 && Vy < 0.0)  // If both Vx and Vy are negative
-            {
-                angle = angle + M_PI;
-            }
-            if (Vx < 0.0 && Vy > 0.0)  // If Vx is positive and Vy is negative
-            {
-                angle = angle - M_PI;
-            }  
-        }
-        if (angle > M_PI)  // If both Vx and Vy are negative
-        {
-            angle = 0.0;
-        }
+
         
         // debug_wheel_encoder_msg.angular.x = vix;
         // debug_wheel_encoder_msg.angular.y = viy;
@@ -308,6 +295,7 @@ float normalize_PWM(float PWM) {
     }
 }
 
+
 void calculate_Stering() {
     ticks_L_front = Encoder1.read();
     ticks_R_front = Encoder2.read();
@@ -328,7 +316,10 @@ void calculate_Stering() {
     angle_rear_right = module_rear_right.get_current_angle();
 
 
-
+    if(V_x == 0.0 && V_y == 0.0 && Omega_z == 0.0) {
+        setzero();
+        return;
+    }
     auto motor = kinematics(V_x, V_y, Omega_z);
 
 
@@ -355,14 +346,19 @@ void calculate_Stering() {
               0, 0);
 
     // debug_wheel_encoder_msg.angular.x = front_L_speed;
-    debug_wheel_encoder_msg.linear.x = motor[0].first;
-    debug_wheel_encoder_msg.linear.z = motor[0].second * (180.0 / M_PI);
+    debug_wheel_encoder_msg.linear.x = speed_front_L_pwm;
+    debug_wheel_encoder_msg.linear.z = speed_front_R_pwm;
     debug_wheel_encoder_msg.linear.y = angle1_correction;
     debug_wheel_encoder_msg.angular.x = angle_front ;
-    // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
+    debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
     // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
+void setzero(){
+    hall_sensor_msg.data = (digitalRead(Hall_Sensor1) == LOW);
+    
+
+}
 
 void MovePower(float Motor1Speed, float Motor2Speed, float Motor3Speed, float Motor4Speed, float Motor5Speed, float Motor6Speed)
 {
@@ -398,12 +394,6 @@ void Arm_position(const void * msgin){
     
 }
 
-// void timer_callback(rcl_timer_t *, int64_t)
-// {
-//   // เซนเซอร์ A3144 จะให้สัญญาณ LOW เมื่อมีแม่เหล็ก
-//   hall_msg.data = (digitalRead(Hall_Sensor1) == LOW);
-//   rcl_publish(&hall_publisher, &hall_msg, NULL);
-// }
 
 void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
 {
@@ -465,6 +455,12 @@ bool createEntities()
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "debug/wheel/encoder_rpm"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &debug_hall_sensor_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "debug/hall_sensor"));
 
     // RCCHECK(rclc_publisher_init_best_effort(
     //     &debug_move_wheel_angle_publisher,
@@ -556,6 +552,7 @@ bool destroyEntities()
 
     rcl_publisher_fini(&debug_move_wheel_motor_publisher, &node);
     rcl_publisher_fini(&debug_move_wheel_encoder_publisher, &node);
+    rcl_publisher_fini(&debug_hall_sensor_publisher, &node);
     rcl_subscription_fini(&move_wheel_motor_subscriber, &node);
     rcl_node_fini(&node);
     rcl_timer_fini(&control_timer);
@@ -590,6 +587,7 @@ void publishData()
     struct timespec time_stamp = getTime();
     rcl_publish(&debug_move_wheel_motor_publisher, &debug_wheel_motor_msg, NULL);
     rcl_publish(&debug_move_wheel_encoder_publisher, &debug_wheel_encoder_msg, NULL);
+    rcl_publish(&debug_hall_sensor_publisher, &hall_sensor_msg, NULL);
     // rcl_publish(&debug_move_wheel_angle_publisher, &debug_wheel_angle_msg, NULL);
 }
 
