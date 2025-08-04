@@ -103,10 +103,6 @@ float angle_rear_right =0.0;
 
 float rpm_front_L = 0;
 float rpm_front_R = 0;
-float rpm_rear_left_L = 0;
-float rpm_rear_left_R = 0;
-float rpm_rear_right_L = 0;
-float rpm_rear_right_R = 0;
 
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
@@ -143,8 +139,7 @@ std::vector<Controller> motors;
     PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_left_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_left_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-    PIDF rear_right_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-    PIDF rear_right_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+
 
 // Move motor
     Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
@@ -188,9 +183,9 @@ PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_K
 
 Servo Arm_Servo[2];
 
-DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3);
-DifferentialSwerveModule module_rear_left(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3);
-DifferentialSwerveModule module_rear_right(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3);
+DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
+DifferentialSwerveModule module_rear_left(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
+DifferentialSwerveModule module_rear_right(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
 //------------------------------ < Fuction Prototype > ------------------------------//
 void setzero();
 void rclErrorLoop();
@@ -287,6 +282,35 @@ void loop()
 
 //------------------------------ < Fuction > -------------------------------------//
 
+float L = 0.3;
+std::vector<std::pair<float, float>> wheel_positions = {
+    {L, 0},                                     // Wheel 1: front
+    {-L / 2, std::sqrt(3) * L / 2},             // Wheel 2: rear-left
+    {-L / 2, -std::sqrt(3) * L / 2}             // Wheel 3: rear-right
+};
+
+std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) {
+std::vector<std::pair<float, float>> motor_speeds;
+
+    for (size_t idx = 0; idx < wheel_positions.size(); ++idx) {
+        float x = wheel_positions[idx].first;
+        float y = wheel_positions[idx].second;
+
+        float vix = Vx - omega * y;
+        float viy = Vy + omega * x;
+
+        float speed = hypot(vix, viy);
+        float angle = viy == 0 && vix == 0 ? 0: atan2(viy, vix);
+
+        
+        // debug_wheel_encoder_msg.angular.x = vix;
+        // debug_wheel_encoder_msg.angular.y = viy;
+
+        motor_speeds.push_back({speed, angle});
+    }
+
+    return motor_speeds;
+}
 
 
 void calculate_Stering() {
@@ -308,85 +332,52 @@ void calculate_Stering() {
 
 
 
-   // Update the angle of each module based on encoder ticks
+   // อัพเดตองศาแต่ละล้อ
     module_front.update_angle(ticks_R_front, ticks_L_front);
     module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
     module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
 
-    // Get the current angle of each module (including module offset)
+    // รับค่าองศาปัจจุบันของแต่ละล้อ
     angle_front = NormalizeDegs(module_front.get_current_angle() + module_front.front_wheel_angle);
     angle_rear_left = NormalizeDegs(module_rear_left.get_current_angle() + module_rear_left.rear_left_wheel_angle);
     angle_rear_right = NormalizeDegs(module_rear_right.get_current_angle() + module_rear_right.rear_right_wheel_angle);
 
-    // Calculate the kinematics for each module
-    auto Module_Front = module_front.kinematics(V_x, V_y, Omega_z);
-    auto Module_Rear_Left = module_rear_left.kinematics(V_x, V_y, Omega_z);
-    auto Module_Rear_Right = module_rear_right.kinematics(V_x, V_y, Omega_z);
 
-    // Calculate the RPM for each wheel
-    float speed_front_L_rpm = MPSToRPM(Module_Front[0].first, WHEEL_DIAMETER);
-    float speed_front_R_rpm = MPSToRPM(Module_Front[0].first, WHEEL_DIAMETER);
-    float speed_rearLeft_R_rpm = MPSToRPM(Module_Rear_Left[2].first, WHEEL_DIAMETER);
-    float speed_rearLeft_L_rpm = MPSToRPM(Module_Rear_Left[2].first, WHEEL_DIAMETER);
-    float speed_rearRight_L_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
-    float speed_rearRight_R_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
+    auto motor = kinematics(V_x, V_y, Omega_z);
 
 
-    // Calculate the angle correction for each wheel
-    float angle1_correction = Angle_Wheel1_pidf.compute(Module_Front[0].second * (180.0 / M_PI), angle_front );
-    float angle2_correction = Angle_Wheel2_pidf.compute(Module_Rear_Left[1].second * (180.0 / M_PI), angle_rear_left);
-    float angle3_correction = Angle_Wheel3_pidf.compute(Module_Rear_Right[2].second * (180.0 / M_PI), angle_rear_right);
+    float speed_front_L_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
+    float speed_front_R_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
+    float speed_rearLeat_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearLeft_R_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearLeft_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearRight_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearRight_R_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    
+    float angle1_correction = Angle_Wheel1_pidf.compute(motor[0].second * (180.0 / M_PI), angle_front );
+    float angle2_correction = Angle_Wheel2_pidf.compute(motor[1].second * (180.0 / M_PI), angle_rear_left);
+    float angle3_correction = Angle_Wheel3_pidf.compute(motor[2].second * (180.0 / M_PI), angle_rear_right);
+
+    float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
+    float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
+
+    float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
+    float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
+
+    float front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
+    float front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
 
 
-    // Calculate the PWM for each wheel based on the RPM and angle correction
-        //Modle Front
-        float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
-        float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
-        //Modle Rear Left
-        float speed_rearLeft_L_pwm = rear_left_L_pidf.compute(speed_rearLeft_L_rpm, rpm_rear_left_L);
-        float speed_rearLeft_R_pwm = rear_left_R_pidf.compute(speed_rearLeft_R_rpm, rpm_rear_left_R);
-        //Modle Rear Right
-        float speed_rearRight_L_pwm = rear_right_L_pidf.compute(speed_rearRight_L_rpm, rpm_rear_right_L);
-        float speed_rearRight_R_pwm = rear_right_R_pidf.compute(speed_rearRight_R_rpm, rpm_rear_right_R);
-
-
-    // Calculate the maximum PWM for each wheel to normalize the speed
-        //Modle Front
-        float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
-        float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
-        //Modle Rear Left
-        float rear_left_L_d = max(abs(speed_rearLeft_L_pwm) + abs(angle2_correction), (float) PWM_Max);
-        float rear_left_R_d = max(abs(speed_rearLeft_R_pwm) + abs(angle2_correction), (float) PWM_Max);
-        //Modle Rear Right
-        float rear_right_L_d = max(abs(speed_rearRight_L_pwm) + abs(angle3_correction), (float) PWM_Max);
-        float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
-
-
-    // Combine steering and driving commands into final PWM output (normalized)
-        //Modle Front
-        float front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
-        float front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
-        //Modle Rear Left
-        float rear_left_L_speed = ((speed_rearLeft_L_pwm - angle2_correction)/ rear_left_L_d) * PWM_Max ;
-        float rear_left_R_speed = ((speed_rearLeft_R_pwm + angle2_correction)/ rear_left_R_d) * PWM_Max ;
-        //Modle Rear Right
-        float rear_right_L_speed = ((speed_rearRight_L_pwm - angle3_correction)/ rear_right_L_d) * PWM_Max ;
-        float rear_right_R_speed = ((speed_rearRight_R_pwm + angle3_correction)/ rear_right_R_d) * PWM_Max ;
-
-    // Move the motors with the calculated speeds
-    MovePower(  front_L_speed   ,   front_R_speed,
-                rear_left_L_speed,  rear_left_R_speed,
-                rear_right_L_speed, rear_right_R_speed  );
-
-
-
+    MovePower(front_L_speed , front_R_speed,
+              0, 0,
+              0, 0);
 
     // debug_wheel_encoder_msg.angular.x = front_L_speed;
     debug_wheel_encoder_msg.linear.x = speed_front_L_pwm;
     debug_wheel_encoder_msg.linear.z = speed_front_R_pwm;
     debug_wheel_encoder_msg.linear.y = angle1_correction;
     debug_wheel_encoder_msg.angular.x = angle_front ;
-    // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
+    debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
     // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
@@ -655,16 +646,9 @@ void Move()
 
 void getEncoderData()
 {
-    #ifdef ESP32_HARDWARE1
     // Get encoder data
     rpm_front_L = Encoder1.getRPM();
     rpm_front_R = Encoder2.getRPM();
-    rpm_rear_left_L = Encoder3.getRPM();
-    rpm_rear_left_R = Encoder4.getRPM();
-    #elif ESP32_HARDWARE2
-    rpm_rear_right_L = Encoder5.getRPM();
-    rpm_rear_right_R = Encoder6.getRPM();
-    #endif
     // debug_wheel_encoder_msg.linear.x = rpm_front_L;
     // debug_wheel_encoder_msg.linear.y = rpm_front_R;
     // debug_wheel_encoder_msg.linear.z = 0.0;
@@ -710,7 +694,18 @@ void rclErrorLoop()
 {
     while (true)
     {
-        delay(1000);
+        flashLED(3);
     }
 }
 
+void flashLED(unsigned int n_times)
+{
+    // for (int i = 0; i < n_times; i++)
+    // {
+        // digitalWrite(LED_BUILTIN, HIGH);
+        // delay(100);
+        // digitalWrite(LED_BUILTIN, LOW);
+        // delay(100);
+    // }
+    delay(1000);
+}
