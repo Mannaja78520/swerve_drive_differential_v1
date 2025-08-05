@@ -59,23 +59,26 @@
     
     //------------------------------ < Define > -------------------------------------//
     
-    rcl_publisher_t debug_move_wheel_motor_publisher;
+    rcl_publisher_t debug_cmd_vel_publisher;
+    rcl_publisher_t debug_wheel_motor_RPM_publisher;
+    rcl_publisher_t debug_wheel_encoder_tick_publisher;
     rcl_publisher_t debug_move_wheel_encoder_publisher;
     rcl_publisher_t debug_hall_sensor1_publisher;
     rcl_publisher_t debug_hall_sensor2_publisher;
     rcl_publisher_t debug_hall_sensor3_publisher;
     
-    rcl_subscription_t move_wheel_motor_subscriber;
+    // rcl_subscription_t move_wheel_motor_subscriber;
     rcl_subscription_t movement_mode_subscriber;
     rcl_subscription_t cmd_vel_subscriber;
     rcl_subscription_t arm_position_servo_subscriber;
-    // rcl_subscription_t wheel_angle_subscriber;
     
     std_msgs__msg__String movement_mode_msg;
     std_msgs__msg__Bool hall_sensor1_msg;
     std_msgs__msg__Bool hall_sensor2_msg;
     std_msgs__msg__Bool hall_sensor3_msg;
     
+    geometry_msgs__msg__Twist debug_wheel_motorRPM_msg;
+    geometry_msgs__msg__Twist debug_wheel_encoder_tick_msg;
     geometry_msgs__msg__Twist debug_wheel_motor_msg;
     geometry_msgs__msg__Twist debug_wheel_encoder_msg;
     geometry_msgs__msg__Twist moveMotor_msg;
@@ -173,11 +176,15 @@ std::vector<Controller> motors;
     
     #endif
        
-void setupMotors() {
+void setupComponent() {
     #ifdef ESP32_HARDWARE1
         motors = {motor1, motor2 , motor3, motor4};
+        pinMode(Hall_Sensor1, INPUT_PULLUP);
+        pinMode(Hall_Sensor2, INPUT_PULLUP);
+
     #elif ESP32_HARDWARE2
         motors = {motor5, motor6};
+        pinMode(Hall_Sensor3, INPUT_PULLUP);
     #endif
 }
 
@@ -203,7 +210,6 @@ struct timespec getTime();
 void publishData();
 void getEncoderData();
 void Move();
-void MoveRPM();
 // void RotageWheel();
 void MovePower(float, float, float, float, float, float);
 void calculate_Stering();
@@ -213,14 +219,13 @@ void setup()
 {
 
     Serial.begin(115200);
-    // pinMode(Hall_Sensor1, INPUT_PULLUP);
     #ifdef MICROROS_WIFI
         
         IPAddress agent_ip(AGENT_IP);
         uint16_t agent_port = AGENT_PORT;
         set_microros_wifi_transports((char*)SSID, (char*)SSID_PW, agent_ip, agent_port);
     #else
-        setupMotors();
+        setupComponent();
         set_microros_serial_transports(Serial);
         #ifdef ESP32_HARDWARE2
             Arm_Servo[0].setPeriodHertz(50);
@@ -295,9 +300,19 @@ void calculate_Stering() {
     ticks_R_front = Encoder2.read();
     ticks_L_rear_left = Encoder3.read();
     ticks_R_rear_left = Encoder4.read();
+
+    debug_wheel_encoder_tick_msg.linear.x = ticks_L_front;
+    debug_wheel_encoder_tick_msg.linear.y = ticks_R_front;
+    debug_wheel_encoder_tick_msg.linear.z = ticks_L_rear_left;
+    debug_wheel_encoder_tick_msg.angular.x = ticks_R_rear_left;
+
+
     #elif ESP32_HARDWARE2
     ticks_L_rear_right = Encoder5.read();
     ticks_R_rear_right = Encoder6.read();
+
+    debug_wheel_encoder_tick_msg.angular.y = ticks_R_rear_right;
+    debug_wheel_encoder_tick_msg.angular.z = ticks_R_rear_right;
     #endif
     debug_wheel_encoder_msg.angular.z = V_x;
 
@@ -406,9 +421,7 @@ void setzero(){
     float search_speed_L = 750.0;  // ปรับความเร็วตามต้องการ
     float search_speed_R = -750.0;
 
-    motor1.spin(search_speed_L);
-    motor2.spin(search_speed_R);
-
+    #ifdef ESP32_HARDWARE1
     if (hall_sensor1) {
         motor1.spin(0);
         motor2.spin(0);
@@ -416,28 +429,56 @@ void setzero(){
         Encoder2.reset();
         ticks_L_front = 0;
         ticks_R_front = 0;
+    }else{
+        motor1.spin(search_speed_L);
+        motor2.spin(search_speed_R);
     }
 
-    // if (hall_sensor2) {
-        //     motor3.spin(0);
-        //     motor4.spin(0);
-        // }
-        //     if (hall_sensor3) {
-        //         motor5.spin(0);
-        //         motor6.spin(0);
-        //     }
+    if (hall_sensor2) {
+        motor3.spin(0);
+        motor4.spin(0);
+        Encoder3.reset();
+        Encoder4.reset();
+        ticks_L_rear_left = 0;
+        ticks_R_rear_left = 0;
+    }else{
+        motor3.spin(search_speed_L);
+        motor4.spin(search_speed_R);
+    }
+
+    #elif ESP32_HARDWARE2
+
+    if (hall_sensor3) {
+        motor5.spin(0);
+        motor6.spin(0);
+        Encoder5.reset();
+        Encoder6.reset();
+        ticks_L_rear_right = 0;
+        ticks_R_rear_right = 0;
+    }else{
+        motor5.spin(search_speed_L);
+        motor6.spin(search_speed_R);
+    }
+    
+    #endif
+
+
+    
     }
 
 void MovePower(float Motor1Speed, float Motor2Speed, float Motor3Speed, float Motor4Speed, float Motor5Speed, float Motor6Speed)
 {
-    motor1.spin(Motor1Speed);
-    motor2.spin(Motor2Speed);
+    #ifdef ESP32_HARDWARE1
+        motor1.spin(Motor1Speed);
+        motor2.spin(Motor2Speed);
+        motor3.spin(Motor3Speed);
+        motor4.spin(Motor4Speed);
 
-    // motor3.spin(Motor3Speed);
-    // motor4.spin(Motor4Speed);
+    #elif ESP32_HARDWARE2
+        motor5.spin(Motor5Speed);
+        motor6.spin(Motor6Speed);     
 
-    // motor5.spin(Motor5Speed);
-    // motor6.spin(Motor6Speed);  
+    #endif   
 }
 void Arm_position(const void * msgin){
     
@@ -512,18 +553,30 @@ bool createEntities()
     // create node
     RCCHECK(rclc_node_init_default(&node, "differential_swerve_basemove_hardware", "", &support));
 
-    // Pub
+    // Publishers
     RCCHECK(rclc_publisher_init_best_effort(
-        &debug_move_wheel_motor_publisher,
+        &debug_wheel_motor_RPM_publisher,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/motor_speed"));
+        "debug/wheel/motor/RPM/esp1"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &debug_wheel_encoder_tick_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "debug/wheel/encoder/tick/esp1"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &debug_cmd_vel_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "debug/wheel/cmd_vel/esp1"));
 
     RCCHECK(rclc_publisher_init_best_effort(
         &debug_move_wheel_encoder_publisher,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/encoder_rpm"));
+        "debug/wheel/encoder_rpm_esp1"));
 
     RCCHECK(rclc_publisher_init_best_effort(
         &debug_hall_sensor1_publisher,
@@ -544,27 +597,12 @@ bool createEntities()
         "debug/hall_sensor3"));
 
 
-
-
-    // RCCHECK(rclc_publisher_init_best_effort(
-    //     &debug_move_wheel_angle_publisher,
-    //     &node,
-    //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    //     "debug/wheel/angle"));
-
-    // Sub
-
+    // Subcription 
     RCCHECK(rclc_subscription_init_default(
         &arm_position_servo_subscriber,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "/servo_position"));
-
-    RCCHECK(rclc_subscription_init_default(
-        &move_wheel_motor_subscriber,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "/wheel/motor_speed"));
 
     RCCHECK(rclc_subscription_init_default(
         &movement_mode_subscriber,
@@ -578,13 +616,6 @@ bool createEntities()
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "/cmd_vel"));
         
-    // RCCHECK(rclc_subscription_init_default(
-    //     &wheel_angle_subscriber,
-    //     &node,
-    //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    //     "/wheel/angle"));
-
-    // create timer for actuating the motors at 50 Hz (1000/20)
     const unsigned int control_timeout = 90;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
@@ -599,13 +630,6 @@ bool createEntities()
         &cmd_vel_subscriber,
         &cmd_vel_msg,
         &cmd_vel_callback,
-        ON_NEW_DATA));
-
-    RCCHECK(rclc_executor_add_subscription(
-        &executor,
-        &move_wheel_motor_subscriber,
-        &moveMotor_msg,
-        &wheelMoveCallback,
         ON_NEW_DATA));
 
     RCCHECK(rclc_executor_add_subscription(
@@ -633,13 +657,17 @@ bool destroyEntities()
 {
     rmw_context_t *rmw_context = rcl_context_get_rmw_context(&support.context);
     (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
-
-    rcl_publisher_fini(&debug_move_wheel_motor_publisher, &node);
+    
+    rcl_subscription_fini(&arm_position_servo_subscriber, &node);
+    rcl_subscription_fini(&movement_mode_subscriber, &node);
+    rcl_subscription_fini(&cmd_vel_subscriber, &node);
+    rcl_publisher_fini(&debug_wheel_motor_RPM_publisher, &node);
+    rcl_publisher_fini(&debug_wheel_encoder_tick_publisher, &node);
+    rcl_publisher_fini(&debug_cmd_vel_publisher, &node);
     rcl_publisher_fini(&debug_move_wheel_encoder_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor1_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor2_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
-    rcl_subscription_fini(&move_wheel_motor_subscriber, &node);
     rcl_node_fini(&node);
     rcl_timer_fini(&control_timer);
     rclc_executor_fini(&executor);
@@ -661,9 +689,17 @@ void getEncoderData()
     rpm_front_R = Encoder2.getRPM();
     rpm_rear_left_L = Encoder3.getRPM();
     rpm_rear_left_R = Encoder4.getRPM();
+
+    debug_wheel_motorRPM_msg.linear.x = rpm_front_L;
+    debug_wheel_motorRPM_msg.linear.y = rpm_front_R;
+    debug_wheel_motorRPM_msg.linear.z = rpm_rear_left_L;
+    debug_wheel_motorRPM_msg.angular.x = rpm_rear_left_R;
     #elif ESP32_HARDWARE2
     rpm_rear_right_L = Encoder5.getRPM();
     rpm_rear_right_R = Encoder6.getRPM();
+
+    debug_wheel_motorRPM_msg.angular.y = rpm_rear_right_L;
+    debug_wheel_motorRPM_msg.angular.z = rpm_rear_right_R;
     #endif
     // debug_wheel_encoder_msg.linear.x = rpm_front_L;
     // debug_wheel_encoder_msg.linear.y = rpm_front_R;
@@ -674,11 +710,13 @@ void getEncoderData()
 
 void publishData()
 {
-    debug_wheel_motor_msg.linear.x = moveMotor_msg.linear.x;
-    debug_wheel_motor_msg.linear.y = moveMotor_msg.linear.y;
-    debug_wheel_motor_msg.linear.z = moveMotor_msg.linear.z;
+    debug_wheel_motor_msg.linear.x = cmd_vel_msg.linear.x;
+    debug_wheel_motor_msg.linear.y = cmd_vel_msg.linear.y;
+    debug_wheel_motor_msg.angular.z = cmd_vel_msg.angular.z;
     struct timespec time_stamp = getTime();
-    rcl_publish(&debug_move_wheel_motor_publisher, &debug_wheel_motor_msg, NULL);
+    rcl_publish(&debug_wheel_motor_RPM_publisher, &debug_wheel_motorRPM_msg, NULL);
+    rcl_publish(&debug_wheel_encoder_tick_publisher, &debug_wheel_encoder_tick_msg, NULL);
+    rcl_publish(&debug_cmd_vel_publisher, &debug_wheel_motor_msg, NULL);
     rcl_publish(&debug_move_wheel_encoder_publisher, &debug_wheel_encoder_msg, NULL);
     rcl_publish(&debug_hall_sensor1_publisher, &hall_sensor1_msg, NULL);
     rcl_publish(&debug_hall_sensor2_publisher, &hall_sensor2_msg, NULL);

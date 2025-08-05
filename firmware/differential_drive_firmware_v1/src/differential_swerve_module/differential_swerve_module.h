@@ -57,6 +57,11 @@ public:
      */
     std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) const;
 
+    /**
+     * @brief รีเซ็ตมุมของโมดูลเป็น 0
+     */
+    void set_zero();
+
 private:
     // ค่าคงที่ทางกายภาพ
     const float TICKS_PER_MOTOR_REV;

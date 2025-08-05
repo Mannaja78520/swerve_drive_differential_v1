@@ -7,7 +7,7 @@ DifferentialSwerveModule::DifferentialSwerveModule(
     float motor_gear_ratio,
     int stationary_gear_teeth, // << จำนวนซี่ของเฟืองวงแหวนที่โมดูลหมุนรอบ
     int drive_gear_teeth,      // << จำนวนซี่ของเฟืองขับที่ติดกับมอเตอร์
-    float wheel_distance_L     // << ระยะห่างจากจุดหมุนกลางไปยังล้อ
+    float wheel_distance_L  // << ระยะห่างจากจุดหมุนกลางไปยังล้อ
 )
     : TICKS_PER_MOTOR_REV(ticks_per_rev),
       MOTOR_GEAR_RATIO(motor_gear_ratio),
@@ -62,6 +62,7 @@ float DifferentialSwerveModule::normalize_angle(float angle_deg) {
     }
     return angle;
 }
+
 
 // ฟังก์ชันคำนวณความเร็วและมุมของล้อ (ใหม่)
 std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float Vx, float Vy, float omega) const {

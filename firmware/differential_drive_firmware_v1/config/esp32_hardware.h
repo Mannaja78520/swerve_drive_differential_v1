@@ -48,56 +48,56 @@
 
         // Motor 1 Parameters
         #define MOTOR1_PWM  -1
-        #define MOTOR1_IN_A 18
-        #define MOTOR1_IN_B 19
+        #define MOTOR1_IN_A 34
+        #define MOTOR1_IN_B 35
 
         // Motor 2 Parameters
         #define MOTOR2_PWM  -1
-        #define MOTOR2_IN_A 22
-        #define MOTOR2_IN_B 23
+        #define MOTOR2_IN_A 18
+        #define MOTOR2_IN_B 19
 
         // Motor 3 Parameters
         #define MOTOR3_PWM  -1
-        #define MOTOR3_IN_A 25
-        #define MOTOR3_IN_B 26
+        #define MOTOR3_IN_A 0
+        #define MOTOR3_IN_B 4
 
         // Motor 4 Parameters
         #define MOTOR4_PWM  -1
-        #define MOTOR4_IN_A 27
-        #define MOTOR4_IN_B 14
+        #define MOTOR4_IN_A 14
+        #define MOTOR4_IN_B 12
 
 
 
         // Encoder 1 Parameter
         #define MOTOR1_ENCODER_INCRIMENT -1
-        #define MOTOR1_ENCODER_PIN_A 32
-        #define MOTOR1_ENCODER_PIN_B 33
+        #define MOTOR1_ENCODER_PIN_A 25
+        #define MOTOR1_ENCODER_PIN_B 26
         #define MOTOR1_ENCODER_RATIO 1
 
         // Encoder 2 Parameter
         #define MOTOR2_ENCODER_INCRIMENT -1
-        #define MOTOR2_ENCODER_PIN_A 25
-        #define MOTOR2_ENCODER_PIN_B 26
+        #define MOTOR2_ENCODER_PIN_A 17
+        #define MOTOR2_ENCODER_PIN_B 16
         #define MOTOR2_ENCODER_RATIO 1
 
         // Encoder 3 Parameter
         #define MOTOR3_ENCODER_INCRIMENT -1
-        #define MOTOR3_ENCODER_PIN_A 16 
-        #define MOTOR3_ENCODER_PIN_B 4
+        #define MOTOR3_ENCODER_PIN_A 2
+        #define MOTOR3_ENCODER_PIN_B 15
         #define MOTOR3_ENCODER_RATIO 1
 
         // Encoder 4 Parameter
         #define MOTOR4_ENCODER_INCRIMENT -1
-        #define MOTOR4_ENCODER_PIN_A 0 
-        #define MOTOR4_ENCODER_PIN_B 2
+        #define MOTOR4_ENCODER_PIN_A 32
+        #define MOTOR4_ENCODER_PIN_B 33
         #define MOTOR4_ENCODER_RATIO 1
 
         // Servo Parameter
 
 
         // Hall Sensor Parameter
-        #define Hall_Sensor1 14
-        #define Hall_Sensor2 12
+        #define Hall_Sensor1 27
+        #define Hall_Sensor2 13
     #endif
 
 
