@@ -1,16 +1,26 @@
 #ifndef DIFFERENTIAL_SWERVE_MODULE_H
 #define DIFFERENTIAL_SWERVE_MODULE_H
 
+#include <vector>
+#include <utility>
+
 class DifferentialSwerveModule {
 public:
+    const float front_wheel_angle = 90.0; // มุมของล้อหน้า
+    const float rear_left_wheel_angle = -150.0;
+    const float rear_right_wheel_angle = -30.0; // มุมของล้อหลังขวา
+
     /**
      * @brief Constructor ของโมดูล (เวอร์ชันใหม่ ใช้จำนวนซี่เฟือง)
      * @param ticks_per_rev จำนวน Ticks ต่อ 1 รอบของมอเตอร์
      * @param motor_gear_ratio อัตราทดเกียร์จากมอเตอร์ไปยังเฟืองขับ
      * @param stationary_gear_teeth จำนวนซี่ของเฟืองวงแหวนที่โมดูลหมุนรอบ
      * @param drive_gear_teeth จำนวนซี่ของเฟืองขับที่ติดกับมอเตอร์
+     * @param wheel_distance_L ระยะจากจุดหมุนกลางไปยังแต่ละล้อ
      */
-    DifferentialSwerveModule(float ticks_per_rev, float motor_gear_ratio, int stationary_gear_teeth, int drive_gear_teeth);
+    DifferentialSwerveModule(float ticks_per_rev, float motor_gear_ratio,
+                             int stationary_gear_teeth, int drive_gear_teeth,
+                             float wheel_distance_L);
 
     /**
      * @brief อัปเดตมุมของโมดูลโดยรับค่า Ticks ปัจจุบันของ Encoder ทั้งสอง
@@ -38,11 +48,24 @@ public:
      */
     float normalize_angle(float angle_deg);
 
+    /**
+     * @brief คำนวณความเร็วและมุมของล้อทั้ง 3 จาก Vx, Vy, omega
+     * @param Vx ความเร็วแกน X (เดินหน้า/ถอยหลัง)
+     * @param Vy ความเร็วแกน Y (เลี้ยวข้าง)
+     * @param omega ความเร็วเชิงมุม (หมุนตัว)
+     * @return รายการของความเร็วและมุม (rad) ของล้อแต่ละล้อ
+     */
+    std::vector<std::pair<float, float>> kinematics(float Vx, float Vy, float omega) const;
+
+    /**
+     * @brief รีเซ็ตมุมของโมดูลเป็น 0
+     */
+    void set_zero();
+
 private:
     // ค่าคงที่ทางกายภาพ
     const float TICKS_PER_MOTOR_REV;
     const float MOTOR_GEAR_RATIO;
-    // ไม่จำเป็นต้องเก็บค่าซี่เฟืองไว้ เพราะใช้คำนวณครั้งเดียวใน Constructor
 
     // ค่าคงที่ที่คำนวณได้
     float TICKS_PER_360_DEG_ROTATION;
@@ -51,6 +74,10 @@ private:
     float current_angle_deg;
     long long last_total_ticks_L;
     long long last_total_ticks_R;
+
+    // ตำแหน่งของล้อแต่ละล้อ (X, Y)
+    std::vector<std::pair<float, float>> wheel_positions;
 };
 
 #endif // DIFFERENTIAL_SWERVE_MODULE_H
+

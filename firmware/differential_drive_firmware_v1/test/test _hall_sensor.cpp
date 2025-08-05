@@ -3,8 +3,8 @@
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial)-
-    pinMode(Hall_Sensor1, INPUT_PULLUP);
+  while (!Serial);
+  pinMode(Hall_Sensor1, INPUT_PULLUP);
 
 }
 

@@ -59,11 +59,11 @@
     
     //------------------------------ < Define > -------------------------------------//
     
-    rcl_publisher_t debug_hall_sensor_publisher;
     rcl_publisher_t debug_move_wheel_motor_publisher;
     rcl_publisher_t debug_move_wheel_encoder_publisher;
-    rcl_publisher_t debug_hall_sensor_publisher;
-    // rcl_publisher_t debug_move_wheel_angle_publisher;
+    rcl_publisher_t debug_hall_sensor1_publisher;
+    rcl_publisher_t debug_hall_sensor2_publisher;
+    rcl_publisher_t debug_hall_sensor3_publisher;
     
     rcl_subscription_t move_wheel_motor_subscriber;
     rcl_subscription_t movement_mode_subscriber;
@@ -72,15 +72,15 @@
     // rcl_subscription_t wheel_angle_subscriber;
     
     std_msgs__msg__String movement_mode_msg;
-    std_msgs__msg__Bool hall_sensor_msg;
+    std_msgs__msg__Bool hall_sensor1_msg;
+    std_msgs__msg__Bool hall_sensor2_msg;
+    std_msgs__msg__Bool hall_sensor3_msg;
     
     geometry_msgs__msg__Twist debug_wheel_motor_msg;
     geometry_msgs__msg__Twist debug_wheel_encoder_msg;
-    geometry_msgs__msg__Twist debug_wheel_angle_msg;
     geometry_msgs__msg__Twist moveMotor_msg;
     geometry_msgs__msg__Twist arm_pos_msg;
     geometry_msgs__msg__Twist cmd_vel_msg;
-    geometry_msgs__msg__Twist wheel_angle_msg;
     
     rclc_executor_t executor;
     rclc_support_t support;
@@ -93,8 +93,8 @@
     long long ticks_R_front = 0;
     long long ticks_L_rear_left = 0;
     long long ticks_R_rear_left = 0;
-    long long ticks_L_rear_Right = 0;
-    long long ticks_R_rear_Right = 0;
+    long long ticks_L_rear_right = 0;
+    long long ticks_R_rear_right = 0;
     
 
 float angle_front =0.0;
@@ -110,6 +110,10 @@ unsigned long prev_odom_update = 0;
 unsigned long current_time = 0;
 static unsigned long last_pub = 0;
 static int disconnect_count = 0;
+
+bool hall_sensor1;
+bool hall_sensor2; 
+bool hall_sensor3;
 
 float V_x = 0.0;
 float V_y = 0.0;
@@ -128,19 +132,49 @@ enum states
     AGENT_DISCONNECTED
 } state;
 
-PIDF front_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-// PIDF motor3_pidf(PWM_Max, PWM_Min, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+std::vector<Controller> motors;
+#ifdef ESP32_HARDWARE1
+
+    PIDF front_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+    PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+    PIDF rear_left_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+    PIDF rear_left_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+
 
 // Move motor
-Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
-Controller motor2(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_BRAKE, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
-// Controller motor3(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR3_INV, MOTOR3_BRAKE, MOTOR3_PWM, MOTOR3_IN_A, MOTOR3_IN_B);
-// Controller motor4(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR4_INV, MOTOR4_BRAKE, MOTOR4_PWM, MOTOR4_IN_A, MOTOR4_IN_B);
-// Controller motor5(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR5_INV, MOTOR5_BRAKE, MOTOR5_PWM, MOTOR5_IN_A, MOTOR5_IN_B);
-// Controller motor6(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR6_INV, MOTOR6_BRAKE, MOTOR6_PWM, MOTOR6_IN_A, MOTOR6_IN_B);
-std::vector<Controller> motorA = {motor1, motor2};
-// std::vector<Controller> motorB = {motor2, motor3}; };
+    Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
+    Controller motor2(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_BRAKE, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
+    Controller motor3(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR3_INV, MOTOR3_BRAKE, MOTOR3_PWM, MOTOR3_IN_A, MOTOR3_IN_B);
+    Controller motor4(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR4_INV, MOTOR4_BRAKE, MOTOR4_PWM, MOTOR4_IN_A, MOTOR4_IN_B);
+
+    esp32_Encoder Encoder1(MOTOR1_ENCODER_PIN_A, MOTOR1_ENCODER_PIN_B, COUNTS_PER_REV1, MOTOR1_ENCODER_INV, MOTOR1_ENCODER_RATIO);
+    esp32_Encoder Encoder2(MOTOR2_ENCODER_PIN_A, MOTOR2_ENCODER_PIN_B, COUNTS_PER_REV2, MOTOR2_ENCODER_INV, MOTOR2_ENCODER_RATIO);
+    esp32_Encoder Encoder3(MOTOR3_ENCODER_PIN_A, MOTOR3_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV, MOTOR3_ENCODER_RATIO);
+    esp32_Encoder Encoder4(MOTOR4_ENCODER_PIN_A, MOTOR4_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR4_ENCODER_INV, MOTOR4_ENCODER_RATIO);
+
+#elif ESP32_HARDWARE2
+
+    PIDF rear_right_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+    PIDF rear_right_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+
+    // Move motor
+    Controller motor5(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR5_INV, MOTOR5_BRAKE, MOTOR5_PWM, MOTOR5_IN_A, MOTOR5_IN_B);
+    Controller motor6(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR6_INV, MOTOR6_BRAKE, MOTOR6_PWM, MOTOR6_IN_A, MOTOR6_IN_B);
+
+    esp32_Encoder Encoder5(MOTOR5_ENCODER_PIN_A, MOTOR5_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR5_ENCODER_INV, MOTOR5_ENCODER_RATIO);
+    esp32_Encoder Encoder6(MOTOR6_ENCODER_PIN_A, MOTOR6_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR6_ENCODER_INV, MOTOR6_ENCODER_RATIO);
+
+    const int servoPins[2] = {SERVO1_PIN, SERVO2_PIN};
+    
+    #endif
+       
+void setupMotors() {
+    #ifdef ESP32_HARDWARE1
+        motors = {motor1, motor2 , motor3, motor4};
+    #elif ESP32_HARDWARE2
+        motors = {motor5, motor6};
+    #endif
+}
 
 
 PIDF Angle_Wheel1_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
@@ -149,17 +183,11 @@ PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_K
 
 Servo Arm_Servo[2];
 
-const int servoPins[2] = {SERVO1_PIN, SERVO2_PIN};
-
 DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
-DifferentialSwerveModule module_rear_left(0.0, 0.0, 0.0, 0.0);
-DifferentialSwerveModule module_rear_right(0.0, 0.0, 0.0, 0.0);
-// Move Encoder
-esp32_Encoder Encoder1(MOTOR1_ENCODER_PIN_A, MOTOR1_ENCODER_PIN_B, COUNTS_PER_REV1, MOTOR1_ENCODER_INV, MOTOR1_ENCODER_RATIO);
-esp32_Encoder Encoder2(MOTOR2_ENCODER_PIN_A, MOTOR2_ENCODER_PIN_B, COUNTS_PER_REV2, MOTOR2_ENCODER_INV, MOTOR2_ENCODER_RATIO);
-// esp32_Encoder Encoder3(MOTOR3_ENCODER_PIN_A, MOTOR3_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV, MOTOR3_ENCODER_RATIO);
+DifferentialSwerveModule module_rear_left(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
+DifferentialSwerveModule module_rear_right(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0);
 //------------------------------ < Fuction Prototype > ------------------------------//
-
+void setzero();
 void rclErrorLoop();
 void syncTime();
 bool createEntities();
@@ -187,25 +215,25 @@ void setup()
         uint16_t agent_port = AGENT_PORT;
         set_microros_wifi_transports((char*)SSID, (char*)SSID_PW, agent_ip, agent_port);
     #else
+        setupMotors();
         set_microros_serial_transports(Serial);
-        for (int i = 0; i < 2; i++) {
+        #ifdef ESP32_HARDWARE2
+            Arm_Servo[0].setPeriodHertz(50);
+            Arm_Servo[0].attach(servoPins[0], 500, 2500);
+            Arm_Servo[0].write(0);
 
-            Arm_Servo[i].setPeriodHertz(50);
-            Arm_Servo[i].attach(servoPins[i], 500, 2500);
-            Arm_Servo[i].write(0);
-        }
+            Arm_Servo[1].setPeriodHertz(50);
+            Arm_Servo[1].attach(servoPins[1], 480, 2580);
+            Arm_Servo[1].write(0);
+                             
+        #endif
     #endif
 }
 
 void loop()
 {
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
-    #ifdef MICROROS_WIFI
-        if (WiFi.status() != WL_CONNECTED) {
-            WiFi.begin((char*)SSID, (char*)SSID_PW);
-            delay(500);
-        }
-    #endif
+    
 
     // EXECUTE_EVERY_N_MS(1000, digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)););
     
@@ -283,53 +311,52 @@ std::vector<std::pair<float, float>> motor_speeds;
 
     return motor_speeds;
 }
- 
-float normalize_PWM(float PWM) {
-
-    if (PWM > PWM_Max) {
-        return PWM_Max;
-    } else if (PWM < -PWM_Max) {
-        return -PWM_Max;
-    } else {
-        return PWM;
-    }
-}
 
 
 void calculate_Stering() {
+    #ifdef ESP32_HARDWARE1
     ticks_L_front = Encoder1.read();
     ticks_R_front = Encoder2.read();
-    // ticks_L_rear_left = Encoder3.getRPM();
-    // ticks_R_rear_left = Encoder4.getRPM();
-    // ticks_L_rear_right = Encoder5.getRPM();
-    // ticks_R_rear_right = Encoder6.getRPM();
+    ticks_L_rear_left = Encoder3.read();
+    ticks_R_rear_left = Encoder4.read();
+    #elif ESP32_HARDWARE2
+    ticks_L_rear_right = Encoder5.read();
+    ticks_R_rear_right = Encoder6.read();
+    #endif
+    debug_wheel_encoder_msg.angular.z = V_x;
+
+    if(abs(V_x) <= 0.05 && abs(V_y) <= 0.05 && abs(Omega_z) <= 0.05) {
+        setzero();
+        return;
+    }
+
 
 
    // อัพเดตองศาแต่ละล้อ
     module_front.update_angle(ticks_R_front, ticks_L_front);
-    // module_rear_left.update_angle(ticks_L_rear_left, ticks_R_r   ear_left);
-    // module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
+    module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
+    module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
 
     // รับค่าองศาปัจจุบันของแต่ละล้อ
-    angle_front = module_front.get_current_angle();
-    angle_rear_left = module_rear_left.get_current_angle();
-    angle_rear_right = module_rear_right.get_current_angle();
+    angle_front = NormalizeDegs(module_front.get_current_angle() + module_front.front_wheel_angle);
+    angle_rear_left = NormalizeDegs(module_rear_left.get_current_angle() + module_rear_left.rear_left_wheel_angle);
+    angle_rear_right = NormalizeDegs(module_rear_right.get_current_angle() + module_rear_right.rear_right_wheel_angle);
 
 
-    if(V_x == 0.0 && V_y == 0.0 && Omega_z == 0.0) {
-        setzero();
-        return;
-    }
     auto motor = kinematics(V_x, V_y, Omega_z);
 
 
     float speed_front_L_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
     float speed_front_R_rpm = MPSToRPM(motor[0].first, WHEEL_DIAMETER);
-    // float speed3_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearLeat_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearLeft_R_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearLeft_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearRight_L_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
+    float speed_rearRight_R_rpm = MPSToRPM(motor[2].first, WHEEL_DIAMETER);
     
     float angle1_correction = Angle_Wheel1_pidf.compute(motor[0].second * (180.0 / M_PI), angle_front );
-    float angle2_correction = Angle_Wheel2_pidf.compute(motor[1].second, angle_rear_left);
-    float angle3_correction = Angle_Wheel3_pidf.compute(motor[2].second, angle_rear_right);
+    float angle2_correction = Angle_Wheel2_pidf.compute(motor[1].second * (180.0 / M_PI), angle_rear_left);
+    float angle3_correction = Angle_Wheel3_pidf.compute(motor[2].second * (180.0 / M_PI), angle_rear_right);
 
     float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
     float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
@@ -354,11 +381,43 @@ void calculate_Stering() {
     // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
-void setzero(){
-    hall_sensor_msg.data = (digitalRead(Hall_Sensor1) == LOW);
-    
+void read_hall_sensor(){
 
-}
+    hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
+    hall_sensor2 = (digitalRead(Hall_Sensor1) == LOW);
+    hall_sensor3 = (digitalRead(Hall_Sensor1) == LOW);
+
+    hall_sensor1_msg.data = hall_sensor1;
+    hall_sensor2_msg.data = hall_sensor2;
+    hall_sensor3_msg.data = hall_sensor3;
+} 
+
+void setzero(){
+    
+    float search_speed_L = 750.0;  // ปรับความเร็วตามต้องการ
+    float search_speed_R = -750.0;
+
+    motor1.spin(search_speed_L);
+    motor2.spin(search_speed_R);
+
+    if (hall_sensor1) {
+        motor1.spin(0);
+        motor2.spin(0);
+        Encoder1.reset();
+        Encoder2.reset();
+        ticks_L_front = 0;
+        ticks_R_front = 0;
+    }
+
+    // if (hall_sensor2) {
+        //     motor3.spin(0);
+        //     motor4.spin(0);
+        // }
+        //     if (hall_sensor3) {
+        //         motor5.spin(0);
+        //         motor6.spin(0);
+        //     }
+    }
 
 void MovePower(float Motor1Speed, float Motor2Speed, float Motor3Speed, float Motor4Speed, float Motor5Speed, float Motor6Speed)
 {
@@ -401,6 +460,7 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
     if (timer != NULL)
     {
         getEncoderData();
+        read_hall_sensor(); 
         calculate_Stering();
         publishData();
     }
@@ -457,10 +517,25 @@ bool createEntities()
         "debug/wheel/encoder_rpm"));
 
     RCCHECK(rclc_publisher_init_best_effort(
-        &debug_hall_sensor_publisher,
+        &debug_hall_sensor1_publisher,
         &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/hall_sensor"));
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+        "debug/hall_sensor1"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &debug_hall_sensor2_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+        "debug/hall_sensor2"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &debug_hall_sensor3_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+        "debug/hall_sensor3"));
+
+
+
 
     // RCCHECK(rclc_publisher_init_best_effort(
     //     &debug_move_wheel_angle_publisher,
@@ -506,7 +581,7 @@ bool createEntities()
         &control_timer,
         &support,
         RCL_MS_TO_NS(control_timeout),
-        controlCallback));
+        &controlCallback));
     executor = rclc_executor_get_zero_initialized_executor();
     RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
     
@@ -552,7 +627,9 @@ bool destroyEntities()
 
     rcl_publisher_fini(&debug_move_wheel_motor_publisher, &node);
     rcl_publisher_fini(&debug_move_wheel_encoder_publisher, &node);
-    rcl_publisher_fini(&debug_hall_sensor_publisher, &node);
+    rcl_publisher_fini(&debug_hall_sensor1_publisher, &node);
+    rcl_publisher_fini(&debug_hall_sensor2_publisher, &node);
+    rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
     rcl_subscription_fini(&move_wheel_motor_subscriber, &node);
     rcl_node_fini(&node);
     rcl_timer_fini(&control_timer);
@@ -587,8 +664,9 @@ void publishData()
     struct timespec time_stamp = getTime();
     rcl_publish(&debug_move_wheel_motor_publisher, &debug_wheel_motor_msg, NULL);
     rcl_publish(&debug_move_wheel_encoder_publisher, &debug_wheel_encoder_msg, NULL);
-    rcl_publish(&debug_hall_sensor_publisher, &hall_sensor_msg, NULL);
-    // rcl_publish(&debug_move_wheel_angle_publisher, &debug_wheel_angle_msg, NULL);
+    rcl_publish(&debug_hall_sensor1_publisher, &hall_sensor1_msg, NULL);
+    rcl_publish(&debug_hall_sensor2_publisher, &hall_sensor2_msg, NULL);
+    rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
 }
 
 void syncTime()
