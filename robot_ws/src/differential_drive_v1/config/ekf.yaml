@@ -1,0 +1,29 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.2
+
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    two_d_mode: true
+
+    publish_tf: true
+
+    odometry0: odom_raw
+    odometry0_config: [true, true, false, false, false, true,
+                       false, false, false, false, false, false,
+                       false, false, false]
+
+    imu0: imu/data
+    imu0_config: [false, false, false, true, true, true,
+                  false, false, false, false, false, false,
+                  false, false, false]
+    imu0_differential: false
+    imu0_remove_gravitational_acceleration: true
+
+    odometry1: /lidar_pose
+    odometry1_config: [true, true, false, false, false, true,
+                       false, false, false, false, false, false,
+                       false, false, false]
