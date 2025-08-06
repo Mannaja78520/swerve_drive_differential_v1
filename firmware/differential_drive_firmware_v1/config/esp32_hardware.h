@@ -48,8 +48,8 @@
 
         // Motor 1 Parameters
         #define MOTOR1_PWM  -1
-        #define MOTOR1_IN_A 34
-        #define MOTOR1_IN_B 35
+        #define MOTOR1_IN_A 15 
+        #define MOTOR1_IN_B 5 
 
         // Motor 2 Parameters
         #define MOTOR2_PWM  -1
@@ -58,13 +58,13 @@
 
         // Motor 3 Parameters
         #define MOTOR3_PWM  -1
-        #define MOTOR3_IN_A 0
+        #define MOTOR3_IN_A 2
         #define MOTOR3_IN_B 4
 
         // Motor 4 Parameters
         #define MOTOR4_PWM  -1
         #define MOTOR4_IN_A 14
-        #define MOTOR4_IN_B 12
+        #define MOTOR4_IN_B 12      
 
 
 
@@ -114,20 +114,20 @@
 
         // Motor 6 Parameters
         #define MOTOR6_PWM  -1
-        #define MOTOR6_IN_A 18
-        #define MOTOR6_IN_B 19
+        #define MOTOR6_IN_A 14
+        #define MOTOR6_IN_B 23
 
 
         // Encoder 5 Parameter
         #define MOTOR5_ENCODER_INCRIMENT -1
-        #define MOTOR5_ENCODER_PIN_A 0
-        #define MOTOR5_ENCODER_PIN_B 2
+        #define MOTOR5_ENCODER_PIN_A 32
+        #define MOTOR5_ENCODER_PIN_B 33
         #define MOTOR5_ENCODER_RATIO 1
 
         // Encoder 6 Parameter
         #define MOTOR6_ENCODER_INCRIMENT -1
-        #define MOTOR6_ENCODER_PIN_A 26
-        #define MOTOR6_ENCODER_PIN_B 25
+        #define MOTOR6_ENCODER_PIN_A 17
+        #define MOTOR6_ENCODER_PIN_B 16
         #define MOTOR6_ENCODER_RATIO 1
 
         // Servo Parameter
@@ -135,7 +135,7 @@
         #define SERVO2_PIN 12
 
         // Hall Sensor Parameter
-        #define Hall_Sensor3 14
+        #define Hall_Sensor3 13
 
 
     #endif

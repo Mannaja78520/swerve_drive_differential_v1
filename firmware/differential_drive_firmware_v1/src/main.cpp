@@ -62,12 +62,12 @@
     //------------------------------ < Define > -------------------------------------//
     
     rcl_publisher_t debug_cmd_vel_publisher;
-    rcl_publisher_t debug_wheel_motor_RPM_publisher;
-    rcl_publisher_t debug_wheel_encoder_tick_publisher;
+    // rcl_publisher_t debug_wheel_motor_RPM_publisher;
+    // rcl_publisher_t debug_wheel_encoder_tick_publisher;
     rcl_publisher_t debug_move_wheel_encoder_publisher;
-    rcl_publisher_t Modlue1_publisher;
-    rcl_publisher_t Modlue2_publisher;
-    rcl_publisher_t Modlue3_publisher;
+    // rcl_publisher_t Modlue1_publisher;
+    // rcl_publisher_t Modlue2_publisher;
+    // rcl_publisher_t Modlue3_publisher;
     rcl_publisher_t debug_hall_sensor1_publisher;
     rcl_publisher_t debug_hall_sensor2_publisher;
     rcl_publisher_t debug_hall_sensor3_publisher;
@@ -82,9 +82,9 @@
     std_msgs__msg__Bool hall_sensor2_msg;
     std_msgs__msg__Bool hall_sensor3_msg;
 
-    std_msgs__msg__Float32MultiArray module1_msg;
-    std_msgs__msg__Float32MultiArray module2_msg;
-    std_msgs__msg__Float32MultiArray module3_msg;
+    // std_msgs__msg__Float32MultiArray module1_msg;
+    // std_msgs__msg__Float32MultiArray module2_msg;
+    // std_msgs__msg__Float32MultiArray module3_msg;
     
     geometry_msgs__msg__Twist debug_wheel_motorRPM_msg;
     geometry_msgs__msg__Twist debug_wheel_encoder_tick_msg;
@@ -311,20 +311,22 @@ void calculate_Stering() {
     ticks_L_rear_left = Encoder3.read();
     ticks_R_rear_left = Encoder4.read();
 
+    bool check = Check_setzero();
+
     debug_wheel_encoder_tick_msg.linear.x = ticks_L_front;
     debug_wheel_encoder_tick_msg.linear.y = ticks_R_front;
     debug_wheel_encoder_tick_msg.linear.z = ticks_L_rear_left;
     debug_wheel_encoder_tick_msg.angular.x = ticks_R_rear_left;
 
-    module1_msg.data.data[0] = ticks_L_front;
-    module1_msg.data.data[1] = ticks_R_front;
-    module1_msg.data.data[2] = angle_front * (M_PI / 180.0f);
-    module1_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
+    // module1_msg.data.data[0] = ticks_L_front;
+    // module1_msg.data.data[1] = ticks_R_front;
+    // module1_msg.data.data[2] = angle_front * (M_PI / 180.0f);
+    // module1_msg.data.data[3] = check ? 1.0f : 0.0f;
 
-    module2_msg.data.data[0] = ticks_L_rear_left;
-    module2_msg.data.data[1] = ticks_R_rear_left;
-    module2_msg.data.data[2] = angle_rear_left * (M_PI / 180.0f);
-    module2_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
+    // module2_msg.data.data[0] = ticks_L_rear_left;
+    // module2_msg.data.data[1] = ticks_R_rear_left;
+    // module2_msg.data.data[2] = angle_rear_left * (M_PI / 180.0f);
+    // module2_msg.data.data[3] = check ? 1.0f : 0.0f;
 
 
 
@@ -338,112 +340,129 @@ void calculate_Stering() {
     module3_msg.data.data[0] = ticks_L_rear_right;
     module3_msg.data.data[1] = ticks_R_rear_right;
     module3_msg.data.data[2] = angle_rear_right * (M_PI / 180.0f);
-    module3_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
+    module3_msg.data.data[3] = check ? 1.0f : 0.0f;
     #endif
 
     debug_wheel_encoder_msg.angular.z = V_x;
 
     Check_setzero();
 
+    float front_L_speed = 0;
+    float front_R_speed = 0;
+    float rear_left_L_speed = 0;
+    float rear_left_R_speed = 0;
+    float rear_right_L_speed = 0;
+    float rear_right_R_speed = 0;
 
 
+    #ifdef ESP32_HARDWARE1
    // Update the angle of each module based on encoder ticks
     module_front.update_angle(ticks_R_front, ticks_L_front);
     module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
-    module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
-
+    
     // Get the current angle of each module (including module offset)
     angle_front = NormalizeDegs(module_front.get_current_angle() + module_front.front_wheel_angle);
     angle_rear_left = NormalizeDegs(module_rear_left.get_current_angle() + module_rear_left.rear_left_wheel_angle);
-    angle_rear_right = NormalizeDegs(module_rear_right.get_current_angle() + module_rear_right.rear_right_wheel_angle);
-
+    
     // Calculate the kinematics for each module
     auto Module_Front = module_front.kinematics(V_x, V_y, Omega_z);
     auto Module_Rear_Left = module_rear_left.kinematics(V_x, V_y, Omega_z);
-    auto Module_Rear_Right = module_rear_right.kinematics(V_x, V_y, Omega_z);
-
+    
     // Calculate the RPM for each wheel
     float speed_front_L_rpm = MPSToRPM(Module_Front[0].first, WHEEL_DIAMETER);
     float speed_front_R_rpm = MPSToRPM(Module_Front[0].first, WHEEL_DIAMETER);
     float speed_rearLeft_R_rpm = MPSToRPM(Module_Rear_Left[2].first, WHEEL_DIAMETER);
     float speed_rearLeft_L_rpm = MPSToRPM(Module_Rear_Left[2].first, WHEEL_DIAMETER);
-    float speed_rearRight_L_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
-    float speed_rearRight_R_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
-
-
+    
+    
     // Calculate the angle correction for each wheel
     float angle1_correction = Angle_Wheel1_pidf.compute(Module_Front[0].second * (180.0 / M_PI), angle_front );
     float angle2_correction = Angle_Wheel2_pidf.compute(Module_Rear_Left[1].second * (180.0 / M_PI), angle_rear_left);
-    float angle3_correction = Angle_Wheel3_pidf.compute(Module_Rear_Right[2].second * (180.0 / M_PI), angle_rear_right);
-
-
+    
+    
     // Calculate the PWM for each wheel based on the RPM and angle correction
-        //Modle Front
-        float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
-        float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
-        //Modle Rear Left
-        float speed_rearLeft_L_pwm = rear_left_L_pidf.compute(speed_rearLeft_L_rpm, rpm_rear_left_L);
-        float speed_rearLeft_R_pwm = rear_left_R_pidf.compute(speed_rearLeft_R_rpm, rpm_rear_left_R);
-        //Modle Rear Right
-        float speed_rearRight_L_pwm = rear_right_L_pidf.compute(speed_rearRight_L_rpm, rpm_rear_right_L);
-        float speed_rearRight_R_pwm = rear_right_R_pidf.compute(speed_rearRight_R_rpm, rpm_rear_right_R);
-
-
+    //Modle Front
+    float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
+    float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
+    //Modle Rear Left
+    float speed_rearLeft_L_pwm = rear_left_L_pidf.compute(speed_rearLeft_L_rpm, rpm_rear_left_L);
+    float speed_rearLeft_R_pwm = rear_left_R_pidf.compute(speed_rearLeft_R_rpm, rpm_rear_left_R);
+    
+    
     // Calculate the maximum PWM for each wheel to normalize the speed
-        //Modle Front
-        float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
-        float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
-        //Modle Rear Left
-        float rear_left_L_d = max(abs(speed_rearLeft_L_pwm) + abs(angle2_correction), (float) PWM_Max);
-        float rear_left_R_d = max(abs(speed_rearLeft_R_pwm) + abs(angle2_correction), (float) PWM_Max);
-        //Modle Rear Right
-        float rear_right_L_d = max(abs(speed_rearRight_L_pwm) + abs(angle3_correction), (float) PWM_Max);
-        float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
-
-
+    //Modle Front
+    float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
+    float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
+    //Modle Rear Left
+    float rear_left_L_d = max(abs(speed_rearLeft_L_pwm) + abs(angle2_correction), (float) PWM_Max);
+    float rear_left_R_d = max(abs(speed_rearLeft_R_pwm) + abs(angle2_correction), (float) PWM_Max);
+    
     // Combine steering and driving commands into final PWM output (normalized)
-        //Modle Front
-        float front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
-        float front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
-        //Modle Rear Left
-        float rear_left_L_speed = ((speed_rearLeft_L_pwm - angle2_correction)/ rear_left_L_d) * PWM_Max ;
-        float rear_left_R_speed = ((speed_rearLeft_R_pwm + angle2_correction)/ rear_left_R_d) * PWM_Max ;
-        //Modle Rear Right
-        float rear_right_L_speed = ((speed_rearRight_L_pwm - angle3_correction)/ rear_right_L_d) * PWM_Max ;
-        float rear_right_R_speed = ((speed_rearRight_R_pwm + angle3_correction)/ rear_right_R_d) * PWM_Max ;
-
+    //Modle Front
+    front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
+    front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
+    //Modle Rear Left
+    rear_left_L_speed = ((speed_rearLeft_L_pwm - angle2_correction)/ rear_left_L_d) * PWM_Max ;
+    rear_left_R_speed = ((speed_rearLeft_R_pwm + angle2_correction)/ rear_left_R_d) * PWM_Max ;
+    
+    #elif ESP32_HARDWARE2
+    
+    module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
+    
+    angle_rear_right = NormalizeDegs(module_rear_right.get_current_angle() + module_rear_right.rear_right_wheel_angle);
+    
+    auto Module_Rear_Right = module_rear_right.kinematics(V_x, V_y, Omega_z);
+    
+    float speed_rearRight_L_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
+    float speed_rearRight_R_rpm = MPSToRPM(Module_Rear_Right[2].first, WHEEL_DIAMETER);
+    
+    float angle3_correction = Angle_Wheel3_pidf.compute(Module_Rear_Right[2].second * (180.0 / M_PI), angle_rear_right);
+    
+    //Modle Rear Right
+    float rear_right_L_d = max(abs(speed_rearRight_L_pwm) + abs(angle3_correction), (float) PWM_Max);
+    float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
+    
+    //Modle Rear Right
+    float speed_rearRight_L_pwm = rear_right_L_pidf.compute(speed_rearRight_L_rpm, rpm_rear_right_L);
+    float speed_rearRight_R_pwm = rear_right_R_pidf.compute(speed_rearRight_R_rpm, rpm_rear_right_R);
+    
+    //Modle Rear Right
+    rear_right_L_speed = ((speed_rearRight_L_pwm - angle3_correction)/ rear_right_L_d) * PWM_Max ;
+    rear_right_R_speed = ((speed_rearRight_R_pwm + angle3_correction)/ rear_right_R_d) * PWM_Max ;
+    
+    #endif
     // Move the motors with the calculated speeds
     MovePower(  front_L_speed   ,   front_R_speed,
-                rear_left_L_speed,  rear_left_R_speed,
-                rear_right_L_speed, rear_right_R_speed  );
-
-
-
-
-    // debug_wheel_encoder_msg.angular.x = front_L_speed;
-    debug_wheel_encoder_msg.linear.x = speed_front_L_pwm;
-    debug_wheel_encoder_msg.linear.z = speed_front_R_pwm;
-    debug_wheel_encoder_msg.linear.y = angle1_correction;
-    debug_wheel_encoder_msg.angular.x = angle_front ;
-    // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
-    // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
-}
-
-
-bool Check_setzero() {
-
-    if (abs(V_x) <= 0.05 && abs(V_y) <= 0.05 && abs(Omega_z) <= 0.05) {
-        setzero();
-        return true;
-    } else {
-        return false;
+        rear_left_L_speed,  rear_left_R_speed,
+        rear_right_L_speed, rear_right_R_speed  );
+        
+        
+        
+        
+        // debug_wheel_encoder_msg.angular.x = front_L_speed;
+        debug_wheel_encoder_msg.linear.x = speed_front_L_pwm;
+        debug_wheel_encoder_msg.linear.z = speed_front_R_pwm;
+        debug_wheel_encoder_msg.linear.y = angle1_correction;
+        debug_wheel_encoder_msg.angular.x = angle_front ;
+        // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
+        // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
     }
-
-}
-void read_hall_sensor(){
-
-    hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
-    hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
+    
+    
+    bool Check_setzero() {
+        
+        if (abs(V_x) <= 0.05 && abs(V_y) <= 0.05 && abs(Omega_z) <= 0.05) {
+            setzero();
+            return true;
+        } else {
+            return false;
+        }
+        
+    }
+    void read_hall_sensor(){
+        
+        hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
+        hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
     // hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
 
     hall_sensor1_msg.data = hall_sensor1;
@@ -590,47 +609,47 @@ bool createEntities()
 
     // Publishers
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &Modlue1_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-        "module1"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &Modlue1_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+    //     "module1"));
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &Modlue2_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-        "module2"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &Modlue2_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+    //     "module2"));
         
-    RCCHECK(rclc_publisher_init_best_effort(
-        &Modlue3_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-        "module3"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &Modlue3_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+    //     "module3"));
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &debug_wheel_motor_RPM_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/motor/RPM/esp1"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &debug_wheel_motor_RPM_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    //     "debug/wheel/motor/RPM/esp1"));
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &debug_wheel_encoder_tick_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/encoder/tick/esp1"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &debug_wheel_encoder_tick_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    //     "debug/wheel/encoder/tick/esp1"));
 
     RCCHECK(rclc_publisher_init_best_effort(
         &debug_cmd_vel_publisher,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/cmd_vel/esp1"));
+        "debug/wheel/cmd_vel/esp"));
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &debug_move_wheel_encoder_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/encoder_rpm_esp1"));
+    // RCCHECK(rclc_publisher_init_best_effort(
+    //     &debug_move_wheel_encoder_publisher,
+    //     &node,
+    //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    //     "debug/wheel/encoder_rpm_esp1"));
 
     RCCHECK(rclc_publisher_init_best_effort(
         &debug_hall_sensor1_publisher,
@@ -670,7 +689,7 @@ bool createEntities()
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "/cmd_vel"));
         
-    const unsigned int control_timeout = 90;
+    const unsigned int control_timeout = 80;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,
@@ -715,11 +734,11 @@ bool destroyEntities()
     rcl_subscription_fini(&arm_position_servo_subscriber, &node);
     rcl_subscription_fini(&movement_mode_subscriber, &node);
     rcl_subscription_fini(&cmd_vel_subscriber, &node);
-    rcl_publisher_fini(&Modlue1_publisher, &node);
-    rcl_publisher_fini(&Modlue2_publisher, &node);
-    rcl_publisher_fini(&Modlue3_publisher, &node);
-    rcl_publisher_fini(&debug_wheel_motor_RPM_publisher, &node);
-    rcl_publisher_fini(&debug_wheel_encoder_tick_publisher, &node);
+    // rcl_publisher_fini(&Modlue1_publisher, &node);
+    // rcl_publisher_fini(&Modlue2_publisher, &node);
+    // rcl_publisher_fini(&Modlue3_publisher, &node);
+    // rcl_publisher_fini(&debug_wheel_motor_RPM_publisher, &node);
+    // rcl_publisher_fini(&debug_wheel_encoder_tick_publisher, &node);
     rcl_publisher_fini(&debug_cmd_vel_publisher, &node);
     rcl_publisher_fini(&debug_move_wheel_encoder_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor1_publisher, &node);
@@ -771,16 +790,16 @@ void publishData()
     debug_wheel_motor_msg.linear.y = cmd_vel_msg.linear.y;
     debug_wheel_motor_msg.angular.z = cmd_vel_msg.angular.z;
     struct timespec time_stamp = getTime();
-    rcl_publish(&debug_wheel_motor_RPM_publisher, &debug_wheel_motorRPM_msg, NULL);
-    rcl_publish(&debug_wheel_encoder_tick_publisher, &debug_wheel_encoder_tick_msg, NULL);
+    // rcl_publish(&debug_wheel_motor_RPM_publisher, &debug_wheel_motorRPM_msg, NULL);
+    // rcl_publish(&debug_wheel_encoder_tick_publisher, &debug_wheel_encoder_tick_msg, NULL);
     rcl_publish(&debug_cmd_vel_publisher, &debug_wheel_motor_msg, NULL);
     rcl_publish(&debug_move_wheel_encoder_publisher, &debug_wheel_encoder_msg, NULL);
     rcl_publish(&debug_hall_sensor1_publisher, &hall_sensor1_msg, NULL);
     rcl_publish(&debug_hall_sensor2_publisher, &hall_sensor2_msg, NULL);
     rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
-    rcl_publish(&Modlue1_publisher, &module1_msg, NULL);
-    rcl_publish(&Modlue2_publisher, &module2_msg, NULL);
-    rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
+    // rcl_publish(&Modlue1_publisher, &module1_msg, NULL);
+    // rcl_publish(&Modlue2_publisher, &module2_msg, NULL);
+    // rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
 }
 
 void syncTime()
