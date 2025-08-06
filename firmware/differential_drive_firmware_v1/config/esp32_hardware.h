@@ -109,25 +109,25 @@
 
         // Motor 5 Parameters
         #define MOTOR5_PWM  -1
-        #define MOTOR5_IN_A 18
-        #define MOTOR5_IN_B 19
+        #define MOTOR5_IN_A 34
+        #define MOTOR5_IN_B 35
 
         // Motor 6 Parameters
         #define MOTOR6_PWM  -1
-        #define MOTOR6_IN_A 22
-        #define MOTOR6_IN_B 23
+        #define MOTOR6_IN_A 18
+        #define MOTOR6_IN_B 19
 
 
         // Encoder 5 Parameter
         #define MOTOR5_ENCODER_INCRIMENT -1
-        #define MOTOR5_ENCODER_PIN_A 32
-        #define MOTOR5_ENCODER_PIN_B 33
+        #define MOTOR5_ENCODER_PIN_A 0
+        #define MOTOR5_ENCODER_PIN_B 2
         #define MOTOR5_ENCODER_RATIO 1
 
         // Encoder 6 Parameter
         #define MOTOR6_ENCODER_INCRIMENT -1
-        #define MOTOR6_ENCODER_PIN_A 25
-        #define MOTOR6_ENCODER_PIN_B 26
+        #define MOTOR6_ENCODER_PIN_A 26
+        #define MOTOR6_ENCODER_PIN_B 25
         #define MOTOR6_ENCODER_RATIO 1
 
         // Servo Parameter
