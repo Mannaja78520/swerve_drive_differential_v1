@@ -70,8 +70,8 @@
 
         // Encoder 1 Parameter
         #define MOTOR1_ENCODER_INCRIMENT -1
-        #define MOTOR1_ENCODER_PIN_A 25
-        #define MOTOR1_ENCODER_PIN_B 26
+        #define MOTOR1_ENCODER_PIN_A 23
+        #define MOTOR1_ENCODER_PIN_B 21
         #define MOTOR1_ENCODER_RATIO 1
 
         // Encoder 2 Parameter
@@ -82,8 +82,8 @@
 
         // Encoder 3 Parameter
         #define MOTOR3_ENCODER_INCRIMENT -1
-        #define MOTOR3_ENCODER_PIN_A 2
-        #define MOTOR3_ENCODER_PIN_B 15
+        #define MOTOR3_ENCODER_PIN_A 25
+        #define MOTOR3_ENCODER_PIN_B 26
         #define MOTOR3_ENCODER_RATIO 1
 
         // Encoder 4 Parameter

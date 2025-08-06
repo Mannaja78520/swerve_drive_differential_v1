@@ -14,6 +14,8 @@
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/string.h>
 #include <geometry_msgs/msg/twist.h>
+#include <std_msgs/msg/float32_multi_array.h>
+
 
 #include <config.h>
 #include <motor.h>
@@ -63,6 +65,9 @@
     rcl_publisher_t debug_wheel_motor_RPM_publisher;
     rcl_publisher_t debug_wheel_encoder_tick_publisher;
     rcl_publisher_t debug_move_wheel_encoder_publisher;
+    rcl_publisher_t Modlue1_publisher;
+    rcl_publisher_t Modlue2_publisher;
+    rcl_publisher_t Modlue3_publisher;
     rcl_publisher_t debug_hall_sensor1_publisher;
     rcl_publisher_t debug_hall_sensor2_publisher;
     rcl_publisher_t debug_hall_sensor3_publisher;
@@ -76,6 +81,10 @@
     std_msgs__msg__Bool hall_sensor1_msg;
     std_msgs__msg__Bool hall_sensor2_msg;
     std_msgs__msg__Bool hall_sensor3_msg;
+
+    std_msgs__msg__Float32MultiArray module1_msg;
+    std_msgs__msg__Float32MultiArray module2_msg;
+    std_msgs__msg__Float32MultiArray module3_msg;
     
     geometry_msgs__msg__Twist debug_wheel_motorRPM_msg;
     geometry_msgs__msg__Twist debug_wheel_encoder_tick_msg;
@@ -213,6 +222,7 @@ void Move();
 // void RotageWheel();
 void MovePower(float, float, float, float, float, float);
 void calculate_Stering();
+bool Check_setzero();
 //------------------------------ < Main > -------------------------------------//
 
 void setup()
@@ -306,6 +316,17 @@ void calculate_Stering() {
     debug_wheel_encoder_tick_msg.linear.z = ticks_L_rear_left;
     debug_wheel_encoder_tick_msg.angular.x = ticks_R_rear_left;
 
+    module1_msg.data.data[0] = ticks_L_front;
+    module1_msg.data.data[1] = ticks_R_front;
+    module1_msg.data.data[2] = angle_front * (M_PI / 180.0f);
+    module1_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
+
+    module2_msg.data.data[0] = ticks_L_rear_left;
+    module2_msg.data.data[1] = ticks_R_rear_left;
+    module2_msg.data.data[2] = angle_rear_left * (M_PI / 180.0f);
+    module2_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
+
+
 
     #elif ESP32_HARDWARE2
     ticks_L_rear_right = Encoder5.read();
@@ -313,13 +334,16 @@ void calculate_Stering() {
 
     debug_wheel_encoder_tick_msg.angular.y = ticks_R_rear_right;
     debug_wheel_encoder_tick_msg.angular.z = ticks_R_rear_right;
+
+    module3_msg.data.data[0] = ticks_L_rear_right;
+    module3_msg.data.data[1] = ticks_R_rear_right;
+    module3_msg.data.data[2] = angle_rear_right * (M_PI / 180.0f);
+    module3_msg.data.data[3] = Check_setzero() ? 1.0f : 0.0f;
     #endif
+
     debug_wheel_encoder_msg.angular.z = V_x;
 
-    if(abs(V_x) <= 0.05 && abs(V_y) <= 0.05 && abs(Omega_z) <= 0.05) {
-        setzero();
-        return;
-    }
+    Check_setzero();
 
 
 
@@ -405,15 +429,26 @@ void calculate_Stering() {
     // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
 }
 
+
+bool Check_setzero() {
+
+    if (abs(V_x) <= 0.05 && abs(V_y) <= 0.05 && abs(Omega_z) <= 0.05) {
+        setzero();
+        return true;
+    } else {
+        return false;
+    }
+
+}
 void read_hall_sensor(){
 
     hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
-    hall_sensor2 = (digitalRead(Hall_Sensor1) == LOW);
-    hall_sensor3 = (digitalRead(Hall_Sensor1) == LOW);
+    hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
+    // hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
 
     hall_sensor1_msg.data = hall_sensor1;
     hall_sensor2_msg.data = hall_sensor2;
-    hall_sensor3_msg.data = hall_sensor3;
+    // hall_sensor3_msg.data = hall_sensor3;
 } 
 
 void setzero(){
@@ -554,6 +589,25 @@ bool createEntities()
     RCCHECK(rclc_node_init_default(&node, "differential_swerve_basemove_hardware", "", &support));
 
     // Publishers
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &Modlue1_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        "module1"));
+
+    RCCHECK(rclc_publisher_init_best_effort(
+        &Modlue2_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        "module2"));
+        
+    RCCHECK(rclc_publisher_init_best_effort(
+        &Modlue3_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        "module3"));
+
     RCCHECK(rclc_publisher_init_best_effort(
         &debug_wheel_motor_RPM_publisher,
         &node,
@@ -661,6 +715,9 @@ bool destroyEntities()
     rcl_subscription_fini(&arm_position_servo_subscriber, &node);
     rcl_subscription_fini(&movement_mode_subscriber, &node);
     rcl_subscription_fini(&cmd_vel_subscriber, &node);
+    rcl_publisher_fini(&Modlue1_publisher, &node);
+    rcl_publisher_fini(&Modlue2_publisher, &node);
+    rcl_publisher_fini(&Modlue3_publisher, &node);
     rcl_publisher_fini(&debug_wheel_motor_RPM_publisher, &node);
     rcl_publisher_fini(&debug_wheel_encoder_tick_publisher, &node);
     rcl_publisher_fini(&debug_cmd_vel_publisher, &node);
@@ -721,6 +778,9 @@ void publishData()
     rcl_publish(&debug_hall_sensor1_publisher, &hall_sensor1_msg, NULL);
     rcl_publish(&debug_hall_sensor2_publisher, &hall_sensor2_msg, NULL);
     rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
+    rcl_publish(&Modlue1_publisher, &module1_msg, NULL);
+    rcl_publish(&Modlue2_publisher, &module2_msg, NULL);
+    rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
 }
 
 void syncTime()
