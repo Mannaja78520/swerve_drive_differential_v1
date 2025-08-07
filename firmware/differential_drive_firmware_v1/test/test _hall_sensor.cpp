@@ -4,12 +4,12 @@
 void setup() {
   Serial.begin(115200);
   while (!Serial);
-  pinMode(Hall_Sensor2, INPUT_PULLUP);
+  pinMode(33, INPUT_PULLUP);
 
 }
 
 void loop() {
   Serial.print("Hall Sensor State: ");
-  Serial.println(digitalRead(Hall_Sensor2) == LOW ? "Magnet Detected" : "No Magnet");
+  Serial.println(digitalRead(33) == LOW ? "Magnet Detected" : "No Magnet");
   delay(1000); // Delay for readability
   }
