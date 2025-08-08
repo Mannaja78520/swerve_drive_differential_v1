@@ -17,7 +17,7 @@ DifferentialSwerveModule::DifferentialSwerveModule(
       last_total_ticks_R(0)
 {
     // คำนวณค่าเกียร์
-    float gear_revs_for_360_turn = static_cast<float>(stationary_gear_teeth) / drive_gear_teeth;
+    float gear_revs_for_360_turn = static_cast<float>((float)stationary_gear_teeth) / (float)drive_gear_teeth;
     this->TICKS_PER_360_DEG_ROTATION = gear_revs_for_360_turn * this->MOTOR_GEAR_RATIO * this->TICKS_PER_MOTOR_REV;
 
     // กำหนดมุมเริ่มต้นตาม module_index
@@ -49,8 +49,10 @@ float DifferentialSwerveModule::update_angle(long long current_total_ticks_L, lo
     long long delta_ticks_L = current_total_ticks_L - this->last_total_ticks_L;
     long long delta_ticks_R = current_total_ticks_R - this->last_total_ticks_R;
 
-    float delta_angle = (static_cast<float>(delta_ticks_L - delta_ticks_R) / 
-                        (2.0f * this->TICKS_PER_360_DEG_ROTATION)) * 360.0f;
+    float steering_tick_diff = (static_cast<float>(delta_ticks_L) - static_cast<float>(delta_ticks_R)) / 2.0;
+    float delta_angle = (static_cast<float>(steering_tick_diff) / this->TICKS_PER_360_DEG_ROTATION) * 360.0;
+    // float delta_angle = (static_cast<float>(delta_ticks_L - delta_ticks_R) / 
+    //                     (2.0f * this->TICKS_PER_360_DEG_ROTATION)) * 360.0f;
 
     this->current_angle_deg = normalize_angle(this->current_angle_deg + delta_angle);
     this->last_total_ticks_L = current_total_ticks_L;

@@ -306,8 +306,8 @@ void loop()
 
 
 void calculate_Stering() {
-    bool check = Check_setzero();
-    // bool check = false;
+    // bool check = Check_setzero();
+    bool check = false;
 
     #ifdef ESP32_HARDWARE1
     ticks_L_front = Encoder1.read();
@@ -357,7 +357,7 @@ void calculate_Stering() {
     // module2_msg.data.size = 4;
     module2_msg.data.data[0] = ticks_L_rear_left;
     module2_msg.data.data[1] = ticks_R_rear_left;
-    module2_msg.data.data[2] = angle_rear_left * (M_PI / 180.0f);
+    module2_msg.data.data[2] = angle_rear_left;
     module2_msg.data.data[3] = check ? 1.0f : 0.0f;
 
     module3_msg.data.data[0] = ticks_L_rear_right;
@@ -456,7 +456,7 @@ void calculate_Stering() {
     //     rear_right_L_speed, rear_right_R_speed  );
 
     MovePower(  V_x + V_y   ,  V_x - V_y,
-    0,  0,
+    V_x + V_y,  V_x - V_y,
     rear_right_L_speed, rear_right_R_speed  );
         
         
