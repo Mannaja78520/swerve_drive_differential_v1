@@ -89,26 +89,26 @@ float DifferentialSwerveModule::normalize_angle(float angle_deg) const {
 
 // ฟังก์ชันคำนวณความเร็วและมุมของล้อ (ใหม่)
 
-std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float Vx, float Vy, float omega) const {
-    std::vector<std::pair<float, float>> motor_speeds;
+// std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float Vx, float Vy, float omega) const {
+//     std::vector<std::pair<float, float>> motor_speeds;
     
-    // แต่ละโมดูลมีเพียง 1 ตำแหน่งล้อ (ตาม module_index)
-    const auto& pos = this->wheel_positions[0];
-    float x = pos.first;
-    float y = pos.second;
+//     // แต่ละโมดูลมีเพียง 1 ตำแหน่งล้อ (ตาม module_index)
+//     const auto& pos = this->wheel_positions[0];
+//     float x = pos.first;
+//     float y = pos.second;
 
-    // คำนวณความเร็วสัมพัทธ์
-    float vx = Vx - omega * y;
-    float vy = Vy + omega * x;
+//     // คำนวณความเร็วสัมพัทธ์
+//     float vx = Vx - omega * y;
+//     float vy = Vy + omega * x;
 
-    float speed = std::hypot(vx, vy);
-    float angle_rad = (speed < 0.001f) ? 0.0f : std::atan2(vy, vx);
-    float angle_deg = this->normalize_angle(angle_rad * 180.0f / M_PI);
+//     float speed = std::hypot(vx, vy);
+//     float angle_rad = (speed < 0.001f) ? 0.0f : std::atan2(vy, vx);
+//     float angle_deg = this->normalize_angle(angle_rad * 180.0f / M_PI);
 
-    motor_speeds.push_back({speed, angle_deg});
+//     motor_speeds.push_back({speed, angle_deg});
     
-    return motor_speeds;
-}
+//     return motor_speeds;
+// }
 
 
 // std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float Vx, float Vy, float omega) const {
@@ -132,3 +132,31 @@ std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float 
     
 //     return wheel_commands;
 // }
+
+
+std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float Vx, float Vy, float omega) const {
+    std::vector<std::pair<float, float>> motor_speeds;
+    
+    const auto& pos = this->wheel_positions[0];
+    float x = pos.first;
+    float y = pos.second;
+
+    // Calculate velocity components for this module
+    float module_vx = Vx - omega * y;
+    float module_vy = Vy + omega * x;
+
+    // Calculate desired wheel angle (global frame)
+    float desired_angle_deg = atan2(module_vy, module_vx) * 180.0f / M_PI;
+    
+    // Calculate desired speed (magnitude)
+    float desired_speed = sqrt(module_vx*module_vx + module_vy*module_vy);
+
+    // Convert to module's local frame
+    float angle_diff = desired_angle_deg - this->current_angle_deg;
+    angle_diff = normalize_angle(angle_diff);
+
+    // The actual wheel speed should combine translation and rotation
+    motor_speeds.push_back({desired_speed, desired_angle_deg});
+    
+    return motor_speeds;
+}

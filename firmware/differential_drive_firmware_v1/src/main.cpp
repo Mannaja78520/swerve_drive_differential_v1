@@ -205,9 +205,9 @@ PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_K
 
 Servo Arm_Servo[2];
 
-DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3, 0);
-DifferentialSwerveModule module_rear_left(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3, 1);
-DifferentialSwerveModule module_rear_right(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.3, 2);
+DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.051, 0);
+DifferentialSwerveModule module_rear_left(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.051, 1);
+DifferentialSwerveModule module_rear_right(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.051, 2);
 //------------------------------ < Fuction Prototype > ------------------------------//
 void setzero();
 void rclErrorLoop();
@@ -468,11 +468,11 @@ void calculate_Stering() {
     // module1_msg.data.data[2] = angle_front ;
     // module1_msg.data.data[3] = check ? 1.0f : 0.0f;
     
-    module3_msg.data.size = 4;
-    module3_msg.data.data[0] = angle3_correction;
-    module3_msg.data.data[1] = module_rear_right_cmd[0].second;
-    module3_msg.data.data[2] = angle_rear_right;
-    module3_msg.data.data[3] = check ? 1.0f : 0.0f;
+    // module3_msg.data.size = 4;
+    // module3_msg.data.data[0] = angle3_correction;
+    // module3_msg.data.data[1] = module_rear_right_cmd[0].second;
+    // module3_msg.data.data[2] = angle_rear_right;
+    // module3_msg.data.data[3] = check ? 1.0f : 0.0f;
     }
     
     
@@ -487,10 +487,12 @@ void calculate_Stering() {
         
     }
     void read_hall_sensor(){
-        
-        // hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
-        // hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
-    hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
+        #ifdef ESP32_HARDWARE1
+            hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
+            hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
+        #elif ESP32_HARDWARE2
+            hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
+        #endif
 
     hall_sensor1_msg.data = hall_sensor1;
     hall_sensor2_msg.data = hall_sensor2;
