@@ -306,8 +306,8 @@ void loop()
 
 
 void calculate_Stering() {
-    // bool check = Check_setzero();
-    bool check = false;
+    bool check = Check_setzero();
+    // bool check = false;
 
     #ifdef ESP32_HARDWARE1
     ticks_L_front = Encoder1.read();
@@ -324,7 +324,7 @@ void calculate_Stering() {
     
     #elif ESP32_HARDWARE2
     ticks_L_rear_right = Encoder5.read();
-    ticks_R_rear_right = Encoder6.read();-
+    ticks_R_rear_right = Encoder6.read();
     
     debug_wheel_encoder_tick_msg.angular.y = ticks_R_rear_right;
     debug_wheel_encoder_tick_msg.angular.z = ticks_R_rear_right;
@@ -346,6 +346,7 @@ void calculate_Stering() {
     auto module_rear_left_cmd = module_rear_left.kinematics(V_x, V_y, Omega_z);
     auto module_rear_right_cmd = module_rear_right.kinematics(V_x, V_y, Omega_z);
     
+    
     // module1_msg.data.size = 4;
     // module1_msg.data.data[0] = ticks_L_front;
     // module1_msg.data.data[1] = ticks_R_front;
@@ -354,7 +355,7 @@ void calculate_Stering() {
     module1_msg.data.data[2] = angle_front ;
     module1_msg.data.data[3] = check ? 1.0f : 0.0f;
     
-    // module2_msg.data.size = 4;
+    module2_msg.data.size = 4;
     module2_msg.data.data[0] = ticks_L_rear_left;
     module2_msg.data.data[1] = ticks_R_rear_left;
     module2_msg.data.data[2] = angle_rear_left;
@@ -362,7 +363,8 @@ void calculate_Stering() {
 
     module3_msg.data.data[0] = ticks_L_rear_right;
     module3_msg.data.data[1] = ticks_R_rear_right;
-    module3_msg.data.data[2] = angle_rear_right * (M_PI / 180.0f);
+    // module3_msg.data.data[2] = angle_rear_right * (M_PI / 180.0f);
+    module3_msg.data.data[2] = angle_rear_right;
     module3_msg.data.data[3] = check ? 1.0f : 0.0f;
     
     if(check) {
@@ -389,13 +391,14 @@ void calculate_Stering() {
     float speed_front_L_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
     float speed_front_R_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
     float speed_rearLeft_R_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
-    float speed_rearLeft_L_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
+    float speed_rearLeft_L_rpm = MPSToRPM(module_rear_left_cmd[0].first , WHEEL_DIAMETER);
     
     
     // Calculate the angle correction for each wheel
-    float angle1_correction = Angle_Wheel1_pidf.compute(module_front_cmd[0].second, angle_front );
-    float angle2_correction = Angle_Wheel2_pidf.compute(module_rear_left_cmd[0].second, angle_rear_left);
+    float angle1_correction = Angle_Wheel1_pidf.compute_with_error(WrapDegs(module_front_cmd[0].second - angle_front));
+    float angle2_correction = Angle_Wheel2_pidf.compute_with_error(WrapDegs(module_rear_left_cmd[0].second - angle_rear_left));
     // module2_msg.data.data[0] = angle1_correction;
+    // module2_msg.data.data[1] = WrapDegs(module_front_cmd[0].second - angle_front);
     
     
     // Calculate the PWM for each wheel based on the RPM and angle correction
@@ -420,8 +423,8 @@ void calculate_Stering() {
     front_L_speed = ((speed_front_L_pwm - angle1_correction)/ front_L_d) * PWM_Max ;
     front_R_speed = ((speed_front_R_pwm + angle1_correction)/ front_R_d) * PWM_Max ;
     //Modle Rear Left
-    rear_left_L_speed = ((speed_rearLeft_L_pwm - angle2_correction)/ rear_left_L_d) * PWM_Max ;
-    rear_left_R_speed = ((speed_rearLeft_R_pwm + angle2_correction)/ rear_left_R_d) * PWM_Max ;
+    rear_left_L_speed = ((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max ;
+    rear_left_R_speed = ((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max ;
     
     #elif ESP32_HARDWARE2
     
@@ -431,7 +434,7 @@ void calculate_Stering() {
     float speed_rearRight_L_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
     float speed_rearRight_R_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
     
-    float angle3_correction = Angle_Wheel2_pidf.compute(module_rear_left_cmd[2].second * (180.0f / M_PI), angle_rear_right);
+    float angle3_correction = Angle_Wheel2_pidf.compute_with_error(WrapDegs(module_rear_right_cmd[0].second - angle_rear_right));
 
     
     //Modle Rear Right
@@ -444,31 +447,32 @@ void calculate_Stering() {
     float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
 
     //Modle Rear Right
-    rear_right_L_speed = ((speed_rearRight_L_pwm - angle3_correction)/ rear_right_L_d) * PWM_Max ;
-    rear_right_R_speed = ((speed_rearRight_R_pwm + angle3_correction)/ rear_right_R_d) * PWM_Max ;
+    rear_right_L_speed = ((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max ;
+    rear_right_R_speed = ((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max ;
     
     #endif
-
-
     // Move the motors with the calculated speeds
-    // MovePower(  front_L_speed   ,   front_R_speed,
-    //     rear_left_L_speed,  rear_left_R_speed,
-    //     rear_right_L_speed, rear_right_R_speed  );
 
-    MovePower(  V_x + V_y   ,  V_x - V_y,
-    V_x + V_y,  V_x - V_y,
-    rear_right_L_speed, rear_right_R_speed  );
+
+    MovePower(  front_L_speed       ,front_R_speed,
+                rear_left_L_speed   ,rear_left_R_speed ,
+                rear_right_L_speed  ,   rear_right_R_speed  );
+
+    // MovePower(  -0   ,  0,
+    //             0   ,  -0,
+    //             angle3_correction, -angle3_correction  );
         
-        
-        
-        
-        // debug_wheel_encoder_msg.angular.x = front_L_speed;
-        // debug_wheel_encoder_msg.linear.x = speed_front_L_pwm;
-        // debug_wheel_encoder_msg.linear.z = speed_front_R_pwm;
-        // debug_wheel_encoder_msg.linear.y = angle1_correction;
-        debug_wheel_encoder_msg.angular.x = angle_front ;
-        // debug_wheel_encoder_msg.angular.y = motor[0].second * (180.0 / M_PI);
-        // debug_wheel_encoder_msg.angular.z = motor[0].second * (180.0 / M_PI);
+
+    // module1_msg.data.data[0] = angle1_correction;
+    // module1_msg.data.data[1] = module_front_cmd[0].second;
+    // module1_msg.data.data[2] = angle_front ;
+    // module1_msg.data.data[3] = check ? 1.0f : 0.0f;
+    
+    module3_msg.data.size = 4;
+    module3_msg.data.data[0] = angle3_correction;
+    module3_msg.data.data[1] = module_rear_right_cmd[0].second;
+    module3_msg.data.data[2] = angle_rear_right;
+    module3_msg.data.data[3] = check ? 1.0f : 0.0f;
     }
     
     
@@ -484,9 +488,9 @@ void calculate_Stering() {
     }
     void read_hall_sensor(){
         
-        hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
-        hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
-    // hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
+        // hall_sensor1 = (digitalRead(Hall_Sensor1) == LOW);
+        // hall_sensor2 = (digitalRead(Hall_Sensor2) == LOW);
+    hall_sensor3 = (digitalRead(Hall_Sensor3) == LOW);
 
     hall_sensor1_msg.data = hall_sensor1;
     hall_sensor2_msg.data = hall_sensor2;
@@ -495,8 +499,8 @@ void calculate_Stering() {
 
 void setzero(){
     
-    float search_speed_L = 750.0;  // ปรับความเร็วตามต้องการ
-    float search_speed_R = -750.0;
+    float search_speed_L = 650.0;  // ปรับความเร็วตามต้องการ
+    float search_speed_R = -650.0;
 
     #ifdef ESP32_HARDWARE1
     if (hall_sensor1) {

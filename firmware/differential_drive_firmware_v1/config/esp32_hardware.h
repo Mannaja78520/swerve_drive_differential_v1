@@ -10,7 +10,7 @@
     #define ENCODER1_PULSES_PER_REVOLUTION 700                               // encoder 1 pulse
     #define ENCODER2_PULSES_PER_REVOLUTION 700                               // encoder 2 pulse
     #define ENCODER3_PULSES_PER_REVOLUTION 700                               // encoder 3 pulse
-    // #define ENCODER4_PULSES_PER_REVOLUTION 700                             // encoder 4 pulse
+    #define ENCODER4_PULSES_PER_REVOLUTION 700                               // encoder 4 pulse
     #define ENCODER_TICKS 4                                                 // encoder ticks
     #define COUNTS_PER_REV1 ENCODER1_PULSES_PER_REVOLUTION * ENCODER_TICKS  // wheel1 encoder's no of ticks per rev
     #define COUNTS_PER_REV2 ENCODER1_PULSES_PER_REVOLUTION * ENCODER_TICKS  // wheel2 encoder's no of ticks per rev
@@ -20,8 +20,8 @@
     // #define LR_WHEELS_DISTANCE 0.335                                        // distance between left and right wheels
     #define PWM_BITS 10                                                     // PWM Resolution of the microcontroller
     #define PWM_FREQUENCY 20000                                             // PWM Frequency
-    #define PWM_Max pow(2, PWM_BITS) - 1
-    #define PWM_Min -PWM_Max
+    #define PWM_Max 1023
+    #define PWM_Min PWM_Max * -1
     #define GEAR_Ratio 1.575                                                // Midpoint of the PWM signal
 
     // #define FIRST_TCA_CHANNEL 3 // TCA9548A channel for the first AS5600 sensor
@@ -128,36 +128,36 @@
     #ifdef ESP32_HARDWARE2
 
         // Motor 5 Parameters
-        // #define MOTOR5_PWM  -1
-        // #define MOTOR5_IN_A 23
-        // #define MOTOR5_IN_B 19
+        #define MOTOR5_PWM  -1
+        #define MOTOR5_IN_A 25
+        #define MOTOR5_IN_B 26
 
-         #define MOTOR5_PWM  -1
-        #define MOTOR5_IN_A -1
-        #define MOTOR5_IN_B -1
+        //  #define MOTOR5_PWM  -1
+        // #define MOTOR5_IN_A -1
+        // #define MOTOR5_IN_B -1
 
-
-        // // Motor 6 Parameters
-        // #define MOTOR6_PWM  -1
-        // #define MOTOR6_IN_A 32
-        // #define MOTOR6_IN_B 33
 
         // Motor 6 Parameters
         #define MOTOR6_PWM  -1
-        #define MOTOR6_IN_A -1
-        #define MOTOR6_IN_B -1
+        #define MOTOR6_IN_A 32
+        #define MOTOR6_IN_B 33
+
+        // Motor 6 Parameters
+        // #define MOTOR6_PWM  -1
+        // #define MOTOR6_IN_A -1
+        // #define MOTOR6_IN_B -1
 
 
         // Encoder 5 Parameter
         #define MOTOR5_ENCODER_INCRIMENT -1
-        #define MOTOR5_ENCODER_PIN_A 18
-        #define MOTOR5_ENCODER_PIN_B 5
+        #define MOTOR5_ENCODER_PIN_A 19
+        #define MOTOR5_ENCODER_PIN_B 18
         #define MOTOR5_ENCODER_RATIO 1
 
         // Encoder 6 Parameter
         #define MOTOR6_ENCODER_INCRIMENT -1
-        #define MOTOR6_ENCODER_PIN_A 32
-        #define MOTOR6_ENCODER_PIN_B 33
+        #define MOTOR6_ENCODER_PIN_A 16
+        #define MOTOR6_ENCODER_PIN_B 4
         #define MOTOR6_ENCODER_RATIO 1
 
         // Servo Parameter
@@ -169,8 +169,8 @@
         // Hall Sensor Parameter
         #define Hall_Sensor3 34
 
-        #define IMU_RST = 4
-        #define IMU_INT = 16
+        // #define IMU_RST = 4
+        // #define IMU_INT = 16
 
 
     #endif
