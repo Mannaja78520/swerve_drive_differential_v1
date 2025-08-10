@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
@@ -8,7 +10,7 @@ import tf2_ros
 from math import sin, cos
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 
-class MergeOdom(Node):
+class merge_odom(Node):
     def __init__(self):
         super().__init__('merge_odom')
 
@@ -49,8 +51,6 @@ class MergeOdom(Node):
         # Publisher
         self.odom_pub = self.create_publisher(Odometry, '/odom_raw', 10)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
-
-        self.get_logger().info("Merge odom node with setzero support started.")
 
     def odom_callback(self, msg0, msg1, msg2):
         now = self.get_clock().now()
@@ -159,6 +159,14 @@ class MergeOdom(Node):
 
 def main():
     rclpy.init()
-    node = MergeOdom()
-    rclpy.spin(node)
-    rclpy.shutdown()
+    node = merge_odom()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

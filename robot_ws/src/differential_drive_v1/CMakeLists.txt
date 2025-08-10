@@ -50,6 +50,7 @@ install(PROGRAMS
   control/keyboard/keyboard_control.py
   control/joystick/joystick_control.py
   scripts/robot_movement.py
+  scripts/merge_odom.py
 
   DESTINATION lib/${PROJECT_NAME}
 )

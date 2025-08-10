@@ -15,5 +15,12 @@ def generate_launch_description():
             name='ekf_filter_node',
             output='screen',
             parameters=[config_file_path]
+        ),
+        Node(
+            package='differential_drive_v1',
+            executable='merge_odom.py',
+            name='merge_odom_node',
+            output='screen',
+            parameters=[{'frame_id': 'odom_raw', 'child_frame_id': 'base_link'}]
         )
     ])
