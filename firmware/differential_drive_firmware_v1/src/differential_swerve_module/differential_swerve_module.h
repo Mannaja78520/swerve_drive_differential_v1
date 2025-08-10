@@ -6,9 +6,9 @@
 
 class DifferentialSwerveModule {
 public:
-    const float front_wheel_angle = 90.0; // มุมของล้อหน้า
-    const float rear_left_wheel_angle = -150.0;
-    const float rear_right_wheel_angle = -30.0; // มุมของล้อหลังขวา
+    const float front_wheel_angle = 90.0f; // มุมของล้อหน้า
+    const float rear_left_wheel_angle = -150.0f;
+    const float rear_right_wheel_angle = -30.0f; // มุมของล้อหลังขวา
 
     /**
      * @brief Constructor ของโมดูล (เวอร์ชันใหม่ ใช้จำนวนซี่เฟือง)
@@ -20,7 +20,7 @@ public:
      */
     DifferentialSwerveModule(float ticks_per_rev, float motor_gear_ratio,
                              int stationary_gear_teeth, int drive_gear_teeth,
-                             float wheel_distance_L);
+                             float wheel_distance_L, int module_index = 0);
 
     /**
      * @brief อัปเดตมุมของโมดูลโดยรับค่า Ticks ปัจจุบันของ Encoder ทั้งสอง
@@ -41,12 +41,14 @@ public:
      */
     float get_current_angle() const;
 
+    float get_wheel_angle() const;
+
     /**
      * @brief ทำให้มุมอยู่ในช่วง -180 ถึง 180 องศา
      * @param angle_deg มุมที่ต้องการจัดระเบียบ
      * @return มุมที่จัดระเบียบแล้ว
      */
-    float normalize_angle(float angle_deg);
+    float normalize_angle(float angle_deg) const;
 
     /**
      * @brief คำนวณความเร็วและมุมของล้อทั้ง 3 จาก Vx, Vy, omega
@@ -74,6 +76,8 @@ private:
     float current_angle_deg;
     long long last_total_ticks_L;
     long long last_total_ticks_R;
+    int module_index; // เพิ่มตัวแปรเก็บ index
+    float wheel_angle_offset; // มุมเริ่มต้นของโมดูลนี้
 
     // ตำแหน่งของล้อแต่ละล้อ (X, Y)
     std::vector<std::pair<float, float>> wheel_positions;

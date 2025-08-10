@@ -9,9 +9,9 @@
 #define Wheel_Motor_I_Min -Wheel_Motor_I_Max
 #define Wheel_Motor_ERROR_TOLERANCE 0
 
-#define Wheel_Spin_Motor_KP 10.0
-#define Wheel_Spin_Motor_KI 0.00
-#define Wheel_Spin_Motor_KD 0.01
+#define Wheel_Spin_Motor_KP 18.5
+#define Wheel_Spin_Motor_KI 0.1
+#define Wheel_Spin_Motor_KD 1.5
 #define Wheel_Spin_Motor_KF 0.0
 #define Wheel_Spin_Motor_I_Max 1023
 #define Wheel_Spin_Motor_I_Min -Wheel_Spin_Motor_I_Max
