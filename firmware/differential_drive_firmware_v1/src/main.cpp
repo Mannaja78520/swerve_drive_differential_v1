@@ -815,7 +815,7 @@ bool createEntities()
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
             "/servo_position"));
     
-        const unsigned int imu_timeout = 20;
+        const unsigned int imu_timeout = 25;
         RCCHECK(rclc_timer_init_default(
             &imu_timer,
             &support,
