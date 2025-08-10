@@ -33,10 +33,7 @@ def generate_launch_description():
     
     ld.add_action(node_microros_1)
     ld.add_action(node_microros_2)
-<<<<<<< HEAD
     # ld.add_action(node_microros_esp1)
     # ld.add_action(node_microros_esp2)
-=======
->>>>>>> refs/remotes/origin/main
 
     return ld

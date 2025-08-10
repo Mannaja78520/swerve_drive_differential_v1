@@ -6,6 +6,7 @@ from std_msgs.msg import String, Int16MultiArray , Float32MultiArray
 from geometry_msgs.msg import Twist 
 from sensor_msgs.msg import Joy
 from rclpy import qos
+import time
 
 class Gamepad:
     def __init__(self):
@@ -115,7 +116,9 @@ class Joystick(Node):
         
         if self.gamepad.button_triangle == 1.0:
             self.get_logger().info(f"R1 pressed - setting servo to 180")
-            servo_msg.linear.x = float(270.0)
+            servo_msg.linear.x = float(180.0)
+            self.Servo_move.publish(servo_msg)
+            time.sleep(0.75)  # Wait for servo to reach position
             servo_msg.angular.x = float(180.0)
             self.Servo_move.publish(servo_msg)
 

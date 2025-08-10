@@ -33,11 +33,11 @@ DifferentialSwerveModule::DifferentialSwerveModule(
             break;
         case 1: // ล้อหลังซ้าย
             this->wheel_angle_offset = this->rear_left_wheel_angle; // 120 องศาจากแกน X
-            this->wheel_positions = {{-wheel_distance_L / 2.0f, std::sqrt(3) * wheel_distance_L / 2.0f}};
+            this->wheel_positions = {{-std::sqrt(3) * wheel_distance_L / 2.0f, wheel_distance_L / 2.0f}};
             break;
         case 2: // ล้อหลังขวา
             this->wheel_angle_offset = this->rear_right_wheel_angle; // -120 องศาจากแกน X
-            this->wheel_positions = {{-wheel_distance_L / 2.0f, -std::sqrt(3) * wheel_distance_L / 2.0f}};
+            this->wheel_positions = {{-std::sqrt(3) * wheel_distance_L / 2.0f, -wheel_distance_L / 2.0f}};
             break;
         default:
             this->wheel_angle_offset = 0.0f;
@@ -142,14 +142,16 @@ std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float 
     float y = pos.second;
 
     // Calculate velocity components for this module
-    float module_vx = Vx - omega * y;
-    float module_vy = Vy + omega * x;
+    float module_vx = Vx + omega * y;
+    float module_vy = Vy - omega * x;
+
+    // Calculate desired speed (magnitude)
+    float desired_speed = sqrt(module_vx*module_vx + module_vy*module_vy);
 
     // Calculate desired wheel angle (global frame)
     float desired_angle_deg = atan2(module_vy, module_vx) * 180.0f / M_PI;
+    desired_angle_deg = optimizeAngle(desired_angle_deg, current_angle_deg, desired_speed);
     
-    // Calculate desired speed (magnitude)
-    float desired_speed = sqrt(module_vx*module_vx + module_vy*module_vy);
 
     // Convert to module's local frame
     float angle_diff = desired_angle_deg - this->current_angle_deg;
@@ -159,4 +161,13 @@ std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float 
     motor_speeds.push_back({desired_speed, desired_angle_deg});
     
     return motor_speeds;
+}
+
+float DifferentialSwerveModule::optimizeAngle(float desired_angle, float current_angle, float &wheel_speed) const{
+    float delta = normalize_angle(desired_angle - current_angle);
+    if (std::fabs(delta) > 90.0f) {
+        desired_angle = normalize_angle(desired_angle + 180.0f);
+        wheel_speed = -wheel_speed;
+    }
+    return desired_angle;
 }

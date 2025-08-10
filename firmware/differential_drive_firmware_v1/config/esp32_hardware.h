@@ -161,16 +161,16 @@
         #define MOTOR6_ENCODER_RATIO 1
 
         // Servo Parameter
-        #define SERVO1_PIN 13
-        #define SERVO2_PIN 23
+        #define SERVO_BASE_PIN 13
+        #define SERVO_TOP_PIN 23
         // #define SERVO1_PIN -1
         // #define SERVO2_PIN -1
 
         // Hall Sensor Parameter
         #define Hall_Sensor3 34
 
-        #define IMU_RST = 17
-        #define IMU_INT = 5
+        #define IMU_RST 17
+        #define IMU_INT 5
 
 
     #endif
