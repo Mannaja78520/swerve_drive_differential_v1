@@ -17,12 +17,6 @@
 #include <geometry_msgs/msg/twist.h>
 #include <std_msgs/msg/float32_multi_array.h>
 
-#ifdef ESP32_HARDWARE2
-    #include <sensor_msgs/msg/imu.h>
-    #include <imu_bno055.h>
-#endif
-
-
 #include <config.h>
 #include <motor.h>
 #include <PIDF.h>
@@ -83,15 +77,11 @@ rcl_subscription_t cmd_vel_subscriber;
 rcl_subscription_t module3_subscriber;
 std_msgs__msg__Float32MultiArray module3_received_msg;
 #elif ESP32_HARDWARE2
-rcl_timer_t imu_timer;
-
-rcl_publisher_t imu_publisher;
 
 rcl_subscription_t module1_subscriber;
 rcl_subscription_t module2_subscriber;
 rcl_subscription_t arm_position_servo_subscriber;
 
-sensor_msgs__msg__Imu imu_msg;
 std_msgs__msg__Float32MultiArray module1_received_msg;
 std_msgs__msg__Float32MultiArray module2_received_msg;
 geometry_msgs__msg__Twist arm_pos_msg;
@@ -207,8 +197,6 @@ Servo Arm_Servo[2];
     esp32_Encoder Encoder5(MOTOR5_ENCODER_PIN_A, MOTOR5_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR5_ENCODER_INV, MOTOR5_ENCODER_RATIO);
     esp32_Encoder Encoder6(MOTOR6_ENCODER_PIN_A, MOTOR6_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR6_ENCODER_INV, MOTOR6_ENCODER_RATIO);
 
-    IMU_BNO055 bno055;
-
     const int servoPins[2] = {SERVO_BASE_PIN, SERVO_TOP_PIN};
     
     #endif
@@ -259,15 +247,6 @@ void setupComponent() {
         pinMode(Hall_Sensor2, INPUT);
 
     #elif ESP32_HARDWARE2
-        pinMode(IMU_RST, OUTPUT);
-        pinMode(IMU_INT, INPUT);
-
-        digitalWrite(IMU_RST, LOW);
-        delay(10);
-        digitalWrite(IMU_RST, HIGH);
-        delay(50);
-
-        bno055.init();
         motors = {motor5, motor6};
         pinMode(Hall_Sensor3, INPUT_PULLUP);
 
@@ -520,11 +499,15 @@ void calculate_Stering() {
     
     // Combine steering and driving commands into final PWM output (normalized)
     //Modle Front
-    front_L_speed = ((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max ;
-    front_R_speed = ((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max ;
+    // front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    front_L_speed = constrain(speed_front_L_pwm + angle1_correction, PWM_Min, PWM_Max) ;
+    front_R_speed = constrain(speed_front_R_pwm - angle1_correction, PWM_Min, PWM_Max) ;
     //Modle Rear Left
-    rear_left_L_speed = ((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max ;
-    rear_left_R_speed = ((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max ;
+    // rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    rear_left_L_speed = constrain(speed_rearLeft_L_pwm + angle2_correction, PWM_Min, PWM_Max) ;
+    rear_left_R_speed = constrain(speed_rearLeft_R_pwm - angle2_correction, PWM_Min, PWM_Max) ;
     
     #elif ESP32_HARDWARE2
     
@@ -544,8 +527,10 @@ void calculate_Stering() {
     float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
 
     //Modle Rear Right
-    rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    rear_right_L_speed = constrain(speed_rearRight_L_pwm + angle3_correction, PWM_Min, PWM_Max) ;
+    rear_right_R_speed = constrain(speed_rearRight_R_pwm - angle3_correction, PWM_Min, PWM_Max) ;
 
     module3_msg.data.data[0] = rear_right_L_speed;
     module3_msg.data.data[1] = rear_right_R_speed;
@@ -684,37 +669,6 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
     }
 }
 
-#ifdef ESP32_HARDWARE2
-void imuCallback(rcl_timer_t *timer, int64_t last_call_time)
-{
-    RCLC_UNUSED(last_call_time);
-    if (timer != NULL)
-    {
-        bno055.getIMUData(imu_msg);
-
-        struct timespec time_stamp = getTime();
-        imu_msg.header.stamp.sec = time_stamp.tv_sec;
-        imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-        imu_msg.header.frame_id.data = "imu_link";
-
-        imu_msg.angular_velocity_covariance[0] = 0.0001;
-        imu_msg.angular_velocity_covariance[4] = 0.0001;
-        imu_msg.angular_velocity_covariance[8] = 0.0001;
-
-        imu_msg.linear_acceleration_covariance[0] = 0.04;
-        imu_msg.linear_acceleration_covariance[4] = 0.04;
-        imu_msg.linear_acceleration_covariance[8] = 0.04;
-
-        imu_msg.orientation_covariance[0] = 0.0025;
-        imu_msg.orientation_covariance[4] = 0.0025;
-        imu_msg.orientation_covariance[8] = 0.0025;
-
-        rcl_publish(&imu_publisher, &imu_msg, NULL);
-
-    }
-}
-#endif
-
 void cmd_vel_callback(const void * msgin) 
 {
     const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
@@ -750,7 +704,11 @@ bool createEntities()
     rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator);
     
     // create node
-    RCCHECK(rclc_node_init_default(&node, "differential_swerve_basemove_hardware", "", &support));
+    #ifdef ESP32_HARDWARE1
+        RCCHECK(rclc_node_init_default(&node, "differential_swerve_esp_hardware1", "", &support));
+    #elif ESP32_HARDWARE2
+        RCCHECK(rclc_node_init_default(&node, "differential_swerve_esp_hardware2", "", &support));
+    #endif
 
     // Publishers
     #ifdef ESP32_HARDWARE1
@@ -799,12 +757,6 @@ bool createEntities()
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
             "/debug/hall_sensor3"));
-
-        RCCHECK(rclc_publisher_init_best_effort(
-            &imu_publisher,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            "/imu/data"));
             
         RCCHECK(rclc_subscription_init_best_effort(
             &module1_subscriber,
@@ -823,13 +775,6 @@ bool createEntities()
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
             "/servo_position"));
-    
-        const unsigned int imu_timeout = 40;
-        RCCHECK(rclc_timer_init_default(
-            &imu_timer,
-            &support,
-            RCL_MS_TO_NS(imu_timeout),
-            &imuCallback));
 
         #endif
 
@@ -866,7 +811,7 @@ bool createEntities()
         &controlCallback));
         
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 7, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
     
     RCCHECK(rclc_executor_add_timer(&executor, &control_timer));
 
@@ -879,7 +824,6 @@ bool createEntities()
             ON_NEW_DATA));
         
     #elif ESP32_HARDWARE2
-        RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
         RCCHECK(rclc_executor_add_subscription(
             &executor,
             &module1_subscriber,
@@ -941,10 +885,8 @@ bool destroyEntities()
     rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
-        rcl_timer_fini(&imu_timer);
     
         rcl_publisher_fini(&Modlue3_publisher, &node);
-        rcl_publisher_fini(&imu_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
         rcl_subscription_fini(&arm_position_servo_subscriber, &node);
         rcl_subscription_fini(&module1_subscriber, &node);
