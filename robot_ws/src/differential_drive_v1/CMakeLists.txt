@@ -53,6 +53,7 @@ install(PROGRAMS
   scripts/merge_odom.py
   scripts/robot_main_state.py
   scripts/navigate.py
+  scripts/robot_lidar.py
 
   DESTINATION lib/${PROJECT_NAME}
 )
