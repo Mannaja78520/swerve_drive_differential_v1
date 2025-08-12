@@ -34,7 +34,7 @@ find_package(ament_index_cpp REQUIRED)
 # Install
 ################################################################################
 install(
-  DIRECTORY launch scripts config
+  DIRECTORY launch scripts config param map
   DESTINATION share/${PROJECT_NAME}
 )
 
@@ -51,6 +51,8 @@ install(PROGRAMS
   control/joystick/joystick_control.py
   scripts/robot_movement.py
   scripts/merge_odom.py
+  scripts/robot_main_state.py
+  scripts/navigate.py
 
   DESTINATION lib/${PROJECT_NAME}
 )
