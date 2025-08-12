@@ -34,7 +34,6 @@
 
 
 
-
 #define RCCHECK(fn)                  \
     {                                \
         rcl_ret_t temp_rc = fn;      \
