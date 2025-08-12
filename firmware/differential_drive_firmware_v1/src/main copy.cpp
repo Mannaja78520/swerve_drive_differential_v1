@@ -27,11 +27,6 @@
 #include <esp32_Encoder.h>    
 #include <ESP32Servo.h>
 
-#ifdef ESP32_HARDWARE2
-    #include <sensor_msgs/msg/imu.h>
-    #include <imu_bno055.h>
-#endif
-
 
 
 #define RCCHECK(fn)                  \
@@ -82,13 +77,11 @@ rcl_subscription_t cmd_vel_subscriber;
 rcl_subscription_t module3_subscriber;
 std_msgs__msg__Float32MultiArray module3_received_msg;
 #elif ESP32_HARDWARE2
-rcl_publisher_t imu_publisher;
 
 rcl_subscription_t module1_subscriber;
 rcl_subscription_t module2_subscriber;
 rcl_subscription_t arm_position_servo_subscriber;
 
-sensor_msgs__msg__Imu imu_msg;
 std_msgs__msg__Float32MultiArray module1_received_msg;
 std_msgs__msg__Float32MultiArray module2_received_msg;
 geometry_msgs__msg__Twist arm_pos_msg;
@@ -178,10 +171,8 @@ Servo Arm_Servo[2];
     PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_left_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_left_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-    PIDF rear_right_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
-    PIDF rear_right_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
 
-// Move motor
+    // Move motor
     Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
     Controller motor2(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_BRAKE, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
     Controller motor3(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR3_INV, MOTOR3_BRAKE, MOTOR3_PWM, MOTOR3_IN_A, MOTOR3_IN_B);
@@ -203,8 +194,6 @@ Servo Arm_Servo[2];
 
     esp32_Encoder Encoder5(MOTOR5_ENCODER_PIN_A, MOTOR5_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR5_ENCODER_INV, MOTOR5_ENCODER_RATIO);
     esp32_Encoder Encoder6(MOTOR6_ENCODER_PIN_A, MOTOR6_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR6_ENCODER_INV, MOTOR6_ENCODER_RATIO);
-
-    IMU_BNO055 bno055;
 
     const int servoPins[2] = {SERVO_BASE_PIN, SERVO_TOP_PIN};
     
@@ -256,7 +245,6 @@ void setupComponent() {
         pinMode(Hall_Sensor2, INPUT);
 
     #elif ESP32_HARDWARE2
-        bno055.init();
         motors = {motor5, motor6};
         pinMode(Hall_Sensor3, INPUT_PULLUP);
 
@@ -367,29 +355,6 @@ void loop()
 //------------------------------ < Fuction > -------------------------------------//
 
 
-#ifdef ESP32_HARDWARE2
-void imu_data(){
-    bno055.getIMUData(imu_msg);
-
-    struct timespec time_stamp = getTime();
-    imu_msg.header.stamp.sec = time_stamp.tv_sec;
-    imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-    imu_msg.header.frame_id.data = "imu_link";
-
-    imu_msg.angular_velocity_covariance[0] = 0.0001;
-    imu_msg.angular_velocity_covariance[4] = 0.0001;
-    imu_msg.angular_velocity_covariance[8] = 0.0001;
-
-    imu_msg.linear_acceleration_covariance[0] = 0.04;
-    imu_msg.linear_acceleration_covariance[4] = 0.04;
-    imu_msg.linear_acceleration_covariance[8] = 0.04;
-
-    imu_msg.orientation_covariance[0] = 0.0025;
-    imu_msg.orientation_covariance[4] = 0.0025;
-    imu_msg.orientation_covariance[8] = 0.0025;
-}
-#endif
-
 
 void calculate_Stering() {
     bool check = Check_setzero();
@@ -443,6 +408,7 @@ void calculate_Stering() {
     #ifdef ESP32_HARDWARE1
         angle_front      = module_front.update_angle(ticks_L_front, ticks_R_front);
         angle_rear_left  = module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
+        
         auto module_front_cmd = module_front.kinematics(V_x, V_y, Omega_z);
         auto module_rear_left_cmd = module_rear_left.kinematics(V_x, V_y, Omega_z);
         
@@ -464,7 +430,9 @@ void calculate_Stering() {
 
     #elif ESP32_HARDWARE2
         angle_rear_right = module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
+        
         auto module_rear_right_cmd = module_rear_right.kinematics(V_x, V_y, Omega_z);
+
         target_angle_rear_right = module_rear_right_cmd[0].second;
 
         module3_msg.data.data[0] = ticks_L_rear_right;
@@ -532,15 +500,15 @@ void calculate_Stering() {
     
     // Combine steering and driving commands into final PWM output (normalized)
     //Modle Front
-    // front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    front_L_speed = constrain(speed_front_L_pwm + angle1_correction, PWM_Min, PWM_Max) ;
-    front_R_speed = constrain(speed_front_R_pwm - angle1_correction, PWM_Min, PWM_Max) ;
+    front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // front_L_speed = constrain(speed_front_L_pwm + angle1_correction, PWM_Min, PWM_Max) ;
+    // front_R_speed = constrain(speed_front_R_pwm - angle1_correction, PWM_Min, PWM_Max) ;
     //Modle Rear Left
-    // rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    rear_left_L_speed = constrain(speed_rearLeft_L_pwm + angle2_correction, PWM_Min, PWM_Max) ;
-    rear_left_R_speed = constrain(speed_rearLeft_R_pwm - angle2_correction, PWM_Min, PWM_Max) ;
+    rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // rear_left_L_speed = constrain(speed_rearLeft_L_pwm + angle2_correction, PWM_Min, PWM_Max) ;
+    // rear_left_R_speed = constrain(speed_rearLeft_R_pwm - angle2_correction, PWM_Min, PWM_Max) ;
     
     #elif ESP32_HARDWARE2
     
@@ -560,13 +528,13 @@ void calculate_Stering() {
     float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
 
     //Modle Rear Right
-    // rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    rear_right_L_speed = constrain(speed_rearRight_L_pwm + angle3_correction, PWM_Min, PWM_Max) ;
-    rear_right_R_speed = constrain(speed_rearRight_R_pwm - angle3_correction, PWM_Min, PWM_Max) ;
+    rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+    // rear_right_L_speed = constrain(speed_rearRight_L_pwm + angle3_correction, PWM_Min, PWM_Max) ;
+    // rear_right_R_speed = constrain(speed_rearRight_R_pwm - angle3_correction, PWM_Min, PWM_Max) ;
 
-    module3_msg.data.data[0] = rear_right_L_speed;
-    module3_msg.data.data[1] = rear_right_R_speed;
+    // module3_msg.data.data[0] = rear_right_L_speed;
+    // module3_msg.data.data[1] = rear_right_R_speed;
     
     #endif
     // Move the motors with the calculated speeds
@@ -575,14 +543,14 @@ void calculate_Stering() {
     //       AtTargetRange(angle_rear_left, target_angle_rear_left, 5.0) &&
     //       AtTargetRange(angle_rear_right, target_angle_rear_right, 5.0)))
     // {
-    //     MovePower(  angle1_correction, -angle1_correction,
-    //                 angle2_correction, -angle2_correction ,
-    //                 angle3_correction, -angle3_correction  );
+        MovePower(  angle1_correction, -angle1_correction,
+                    angle2_correction, -angle2_correction ,
+                    angle3_correction, -angle3_correction  );
         
     // } else {
-        MovePower(  front_L_speed       ,front_R_speed,
-                    rear_left_L_speed   ,rear_left_R_speed ,
-                    rear_right_L_speed  ,   rear_right_R_speed  );
+        // MovePower(  front_L_speed       ,front_R_speed,
+        //             rear_left_L_speed   ,rear_left_R_speed ,
+        //             rear_right_L_speed  ,   rear_right_R_speed  );
     // }
 
     // MovePower(  -0   ,  0,
@@ -616,8 +584,8 @@ void calculate_Stering() {
 
 void setzero(){
     
-    float search_speed_L = 600.0;  // ปรับความเร็วตามต้องการ
-    float search_speed_R = -600.0;
+    float search_speed_L = 500.0;  // ปรับความเร็วตามต้องการ
+    float search_speed_R = -500.0;
 
     #ifdef ESP32_HARDWARE1
     if (hall_sensor1) {
@@ -750,7 +718,7 @@ bool createEntities()
             &Modlue1_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-            "/debug/module1"));
+            "/debug/module1")); 
 
         RCCHECK(rclc_publisher_init_best_effort(
             &debug_hall_sensor1_publisher,
@@ -778,13 +746,6 @@ bool createEntities()
             "/debug/module3"));
         
     #elif ESP32_HARDWARE2
-
-        RCCHECK(rclc_publisher_init_best_effort(
-            &imu_publisher,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            "/imu/data"));
-            
 
         RCCHECK(rclc_publisher_init_best_effort(
             &Modlue3_publisher,
@@ -843,7 +804,7 @@ bool createEntities()
         "/cmd_vel"));
         
     // create timer for control loop 1000/80 Hz
-    const unsigned int control_timeout = 135; // 1000/80 = 12.5 ms, 135 ms for safety margin
+    const unsigned int control_timeout = 100;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,
@@ -925,8 +886,7 @@ bool destroyEntities()
     rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
-
-        rcl_publisher_fini(&imu_publisher, &node);
+    
         rcl_publisher_fini(&Modlue3_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
         rcl_subscription_fini(&arm_position_servo_subscriber, &node);
@@ -991,8 +951,6 @@ void publishData()
         rcl_publish(&Modlue1_publisher, &module1_msg, NULL);
         rcl_publish(&Modlue2_publisher, &module2_msg, NULL);
     #elif ESP32_HARDWARE2
-        imu_data();
-        rcl_publish(&imu_publisher, &imu_msg, NULL);
         rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
         rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
     #endif

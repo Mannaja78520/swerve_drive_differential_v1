@@ -70,6 +70,7 @@ private:
     // ค่าคงที่ทางกายภาพ
     const float TICKS_PER_MOTOR_REV;
     const float MOTOR_GEAR_RATIO;
+    float omega_gain = 15.0;
 
     // ค่าคงที่ที่คำนวณได้
     float TICKS_PER_360_DEG_ROTATION;
