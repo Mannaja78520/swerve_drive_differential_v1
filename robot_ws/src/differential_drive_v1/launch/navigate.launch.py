@@ -19,7 +19,7 @@ def generate_launch_description():
         )
     )
 
-    param_file_name = 'burger.yaml'
+    param_file_name = 'swerve.yaml'
     param_dir = LaunchConfiguration(
         'params_file',
         default=os.path.join(

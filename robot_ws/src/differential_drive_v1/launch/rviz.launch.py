@@ -22,14 +22,14 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-TURTLEBOT3_MODEL = os.environ.get('TURTLEBOT3_MODEL', 'burger')
+# TURTLEBOT3_MODEL = os.environ.get('TURTLEBOT3_MODEL', 'burger')
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     rviz_config_dir = os.path.join(
-        get_package_share_directory('nav2_bringup'),
+        get_package_share_directory('differential_drive_v1'),
         'rviz',
-        'nav2_default_view.rviz'
+        'nav2_swerve.rviz'
     )
 
     return LaunchDescription([

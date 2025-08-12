@@ -33,7 +33,7 @@ class merge_odom(Node):
         self.y = 0.0
         self.theta = 0.0
 
-        self.frame_id = 'odom_raw'
+        self.frame_id = 'odom/raw'
         self.child_frame_id = 'base_link'
         
         # Subscribers (one per module)
@@ -49,7 +49,7 @@ class merge_odom(Node):
         self.ts.registerCallback(self.odom_callback)
 
         # Publisher
-        self.odom_pub = self.create_publisher(Odometry, '/odom_raw', 10)
+        self.odom_pub = self.create_publisher(Odometry, '/odom/raw', 10)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
     def odom_callback(self, msg0, msg1, msg2):
@@ -155,6 +155,23 @@ class merge_odom(Node):
         t.transform.rotation.z = qz
         t.transform.rotation.w = qw
         self.tf_broadcaster.sendTransform(t)
+
+
+def quaternion_from_euler(self, roll, pitch, yaw):
+        cy = np.cos(yaw * 0.5)
+        sy = np.sin(yaw * 0.5)
+        cp = np.cos(pitch * 0.5)
+        sp = np.sin(pitch * 0.5)
+        cr = np.cos(roll * 0.5)
+        sr = np.sin(roll * 0.5)
+        
+        q = [0] * 4
+        q[0] = cy * cp * cr + sy * sp * sr
+        q[1] = cy * cp * sr - sy * sp * cr
+        q[2] = sy * cp * sr + cy * sp * cr
+        q[3] = sy * cp * cr - cy * sp * sr
+        
+        return q
 
 
 def main():
