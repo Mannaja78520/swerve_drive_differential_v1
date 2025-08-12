@@ -83,7 +83,7 @@ rcl_subscription_t cmd_vel_subscriber;
 rcl_subscription_t module3_subscriber;
 std_msgs__msg__Float32MultiArray module3_received_msg;
 #elif ESP32_HARDWARE2
-rcl_timer_t imu_timer;
+// rcl_timer_t imu_timer;
 
 rcl_publisher_t imu_publisher;
 
@@ -260,13 +260,13 @@ void setupComponent() {
         pinMode(Hall_Sensor2, INPUT);
 
     #elif ESP32_HARDWARE2
-        pinMode(IMU_RST, OUTPUT);
-        pinMode(IMU_INT, INPUT);
+        // pinMode(IMU_RST, OUTPUT);
+        // pinMode(IMU_INT, INPUT);
 
-        digitalWrite(IMU_RST, LOW);
-        delay(10);
-        digitalWrite(IMU_RST, HIGH);
-        delay(50);
+        // digitalWrite(IMU_RST, LOW);
+        // delay(10);
+        // digitalWrite(IMU_RST, HIGH);
+        // delay(50);
 
         bno055.init();
         motors = {motor5, motor6};
@@ -676,33 +676,29 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
 }
 
 #ifdef ESP32_HARDWARE2
-void imuCallback(rcl_timer_t *timer, int64_t last_call_time)
-{
-    RCLC_UNUSED(last_call_time);
-    if (timer != NULL)
-    {
-        bno055.getIMUData(imu_msg);
+// void imuCallback(rcl_timer_t *timer, int64_t last_call_time)
+// {
+// }
 
-        struct timespec time_stamp = getTime();
-        imu_msg.header.stamp.sec = time_stamp.tv_sec;
-        imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-        imu_msg.header.frame_id.data = "imu_link";
+void imu_data(){
+    bno055.getIMUData(imu_msg);
 
-        imu_msg.angular_velocity_covariance[0] = 0.0001;
-        imu_msg.angular_velocity_covariance[4] = 0.0001;
-        imu_msg.angular_velocity_covariance[8] = 0.0001;
+    struct timespec time_stamp = getTime();
+    imu_msg.header.stamp.sec = time_stamp.tv_sec;
+    imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+    imu_msg.header.frame_id.data = "imu_link";
 
-        imu_msg.linear_acceleration_covariance[0] = 0.04;
-        imu_msg.linear_acceleration_covariance[4] = 0.04;
-        imu_msg.linear_acceleration_covariance[8] = 0.04;
+    imu_msg.angular_velocity_covariance[0] = 0.0001;
+    imu_msg.angular_velocity_covariance[4] = 0.0001;
+    imu_msg.angular_velocity_covariance[8] = 0.0001;
 
-        imu_msg.orientation_covariance[0] = 0.0025;
-        imu_msg.orientation_covariance[4] = 0.0025;
-        imu_msg.orientation_covariance[8] = 0.0025;
+    imu_msg.linear_acceleration_covariance[0] = 0.04;
+    imu_msg.linear_acceleration_covariance[4] = 0.04;
+    imu_msg.linear_acceleration_covariance[8] = 0.04;
 
-        rcl_publish(&imu_publisher, &imu_msg, NULL);
-
-    }
+    imu_msg.orientation_covariance[0] = 0.0025;
+    imu_msg.orientation_covariance[4] = 0.0025;
+    imu_msg.orientation_covariance[8] = 0.0025;
 }
 #endif
 
@@ -815,12 +811,12 @@ bool createEntities()
             ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
             "/servo_position"));
     
-        const unsigned int imu_timeout = 25;
-        RCCHECK(rclc_timer_init_default(
-            &imu_timer,
-            &support,
-            RCL_MS_TO_NS(imu_timeout),
-            &imuCallback));
+        // const unsigned int imu_timeout = 70;
+        // RCCHECK(rclc_timer_init_default(
+        //     &imu_timer,
+        //     &support,
+        //     RCL_MS_TO_NS(imu_timeout),
+        //     &imuCallback));
 
         #endif
 
@@ -857,7 +853,7 @@ bool createEntities()
         &controlCallback));
         
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 8, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 7, &allocator));
     RCCHECK(rclc_executor_add_timer(&executor, &control_timer));
         
     #ifdef ESP32_HARDWARE1
@@ -869,7 +865,7 @@ bool createEntities()
             ON_NEW_DATA));
         
     #elif ESP32_HARDWARE2
-        RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
+        // RCCHECK(rclc_executor_add_timer(&executor, &imu_timer));
         RCCHECK(rclc_executor_add_subscription(
             &executor,
             &module1_subscriber,
@@ -996,6 +992,7 @@ void publishData()
     #elif ESP32_HARDWARE2
         rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
         rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
+        rcl_publish(&imu_publisher, &imu_msg, NULL);
     #endif
 }
 
