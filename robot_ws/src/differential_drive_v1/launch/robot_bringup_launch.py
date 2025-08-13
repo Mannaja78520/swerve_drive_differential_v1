@@ -23,7 +23,7 @@ def generate_launch_description():
     
     lidar_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(diff_swerve_dir, 'launch', 'view_sllidar_c1_launch.py')
+            os.path.join(lidar_dir, 'launch', 'view_sllidar_c1_launch.py')
         ),
     )
 
@@ -61,6 +61,7 @@ def generate_launch_description():
             remappings=[('/odometry/filtered', '/odom')]
         ),
         # nav_launch,
+        lidar_launch,
         # Node(
         #     package='differential_drive_v1',
         #     executable='robot_lidar.py',
