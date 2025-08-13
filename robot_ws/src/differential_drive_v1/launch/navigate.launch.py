@@ -40,6 +40,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_collision_monitor', default_value='False'),  # <<<<
         DeclareLaunchArgument('use_docking', default_value='False'),            # <<<<
         nav2,
+        # navigate_node,
         # Node(
         #     package='rviz2',
         #     executable='rviz2',
@@ -48,6 +49,5 @@ def generate_launch_description():
         #     parameters=[{'use_sim_time': use_sim_time}],
         #     output='screen',
         # ),
-        # navigate_node,
     ])
 
