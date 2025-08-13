@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+
+
 float ToDegrees(float radians) {
     return radians / 2.0 / PI * 360.0;
 }
@@ -18,14 +20,20 @@ static boolean AtTargetRange(float number, float target, float range) {
 static double WrapRads(float rads) {
     if (rads >  PI) return rads - (2.0 * PI);
     if (rads < -PI) return rads + (2.0 * PI);
-    return rads;
+return rads;
 }
 
 static float WrapDegs(float degs) {
     if (degs >  180) return degs - 360;
     if (degs < -180) return degs + 360;
-    return degs;
+return degs;
 }
+
+bool AtTargetAngle(float current_angle, float target_angle, float tolerance) {
+    float diff = abs(WrapDegs(target_angle - current_angle));
+    return diff <= tolerance;
+}
+
 
 static float NormalizeRads(float rads) {
     rads = fmod(rads, 2.0 * PI);

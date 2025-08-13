@@ -18,8 +18,16 @@ def generate_launch_description():
         arguments=["serial", "--dev", "/dev/esp2"],
         name="micro_ros_agent_esp2"
     )
+    node_microros_esp3 = Node(
+        package="micro_ros_agent",
+        executable="micro_ros_agent",
+        output="screen",
+        arguments=["serial", "--dev", "/dev/esp3"],
+        name="micro_ros_agent_esp2"
+    )
     
     ld.add_action(node_microros_esp1)
     ld.add_action(node_microros_esp2)
+    ld.add_action(node_microros_esp3)
 
     return ld

@@ -33,11 +33,11 @@ DifferentialSwerveModule::DifferentialSwerveModule(
             break;
         case 1: // ล้อหลังซ้าย
             this->wheel_angle_offset = this->rear_left_wheel_angle; // 120 องศาจากแกน X
-            this->wheel_positions = {{-std::sqrt(3) * wheel_distance_L / 2.0f, wheel_distance_L / 2.0f}};
+            this->wheel_positions = {{-wheel_distance_L / 2.0f, std::sqrt(3) * wheel_distance_L / 2.0f}};
             break;
         case 2: // ล้อหลังขวา
             this->wheel_angle_offset = this->rear_right_wheel_angle; // -120 องศาจากแกน X
-            this->wheel_positions = {{-std::sqrt(3) * wheel_distance_L / 2.0f, -wheel_distance_L / 2.0f}};
+            this->wheel_positions = {{-wheel_distance_L / 2.0f, -std::sqrt(3) * wheel_distance_L / 2.0f}};
             break;
         default:
             this->wheel_angle_offset = 0.0f;
@@ -142,8 +142,8 @@ std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float 
     float y = pos.second;
 
     // Calculate velocity components for this module
-    float module_vx = Vx + omega * y;
-    float module_vy = Vy - omega * x;
+    float module_vx = Vx + (omega * y * omega_gain);
+    float module_vy = Vy - (omega * x * omega_gain);
 
     // Calculate desired speed (magnitude)
     float desired_speed = sqrt(module_vx*module_vx + module_vy*module_vy);
