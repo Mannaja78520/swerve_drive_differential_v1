@@ -27,6 +27,11 @@
 #include <esp32_Encoder.h>    
 #include <ESP32Servo.h>
 
+#ifdef ESP32_HARDWARE2
+    #include <sensor_msgs/msg/imu.h>
+    #include <imu_bno055.h>
+#endif
+
 
 
 #define RCCHECK(fn)                  \
@@ -77,11 +82,13 @@ rcl_subscription_t cmd_vel_subscriber;
 rcl_subscription_t module3_subscriber;
 std_msgs__msg__Float32MultiArray module3_received_msg;
 #elif ESP32_HARDWARE2
+rcl_publisher_t imu_publisher;
 
 rcl_subscription_t module1_subscriber;
 rcl_subscription_t module2_subscriber;
 rcl_subscription_t arm_position_servo_subscriber;
 
+sensor_msgs__msg__Imu imu_msg;
 std_msgs__msg__Float32MultiArray module1_received_msg;
 std_msgs__msg__Float32MultiArray module2_received_msg;
 geometry_msgs__msg__Twist arm_pos_msg;
@@ -172,6 +179,10 @@ Servo Arm_Servo[2];
     PIDF rear_left_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_left_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
 
+    PIDF Angle_Wheel1_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_1_KP, Wheel_Spin_Motor_1_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_1_KD, Wheel_Spin_Motor_1_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
+    PIDF Angle_Wheel2_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_2_KP, Wheel_Spin_Motor_2_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_2_KD, Wheel_Spin_Motor_2_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
+
+
     // Move motor
     Controller motor1(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_BRAKE, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
     Controller motor2(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_BRAKE, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
@@ -187,6 +198,7 @@ Servo Arm_Servo[2];
 
     PIDF rear_right_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_right_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
+    PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_3_KP, Wheel_Spin_Motor_3_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_3_KD, Wheel_Spin_Motor_3_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
 
     // Move motor
     Controller motor5(Controller::PRIK_KEE_NOO, PWM_FREQUENCY, PWM_BITS, MOTOR5_INV, MOTOR5_BRAKE, MOTOR5_PWM, MOTOR5_IN_A, MOTOR5_IN_B);
@@ -194,6 +206,8 @@ Servo Arm_Servo[2];
 
     esp32_Encoder Encoder5(MOTOR5_ENCODER_PIN_A, MOTOR5_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR5_ENCODER_INV, MOTOR5_ENCODER_RATIO);
     esp32_Encoder Encoder6(MOTOR6_ENCODER_PIN_A, MOTOR6_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR6_ENCODER_INV, MOTOR6_ENCODER_RATIO);
+
+    IMU_BNO055 bno055;
 
     const int servoPins[2] = {SERVO_BASE_PIN, SERVO_TOP_PIN};
     
@@ -248,20 +262,31 @@ void setupComponent() {
         motors = {motor5, motor6};
         pinMode(Hall_Sensor3, INPUT_PULLUP);
 
+        bno055.init();
+
         Arm_Servo[0].setPeriodHertz(50);
         Arm_Servo[0].attach(servoPins[0], 500, 2500);
         Arm_Servo[0].write(0);
 
         Arm_Servo[1].setPeriodHertz(50);
-        Arm_Servo[1].attach(servoPins[1], 500, 2580);
+        Arm_Servo[1].attach(servoPins[1], 480, 2580);
         Arm_Servo[1].write(0);
+
+        imu_msg.header.frame_id.data = "imu_link";
+
+        imu_msg.angular_velocity_covariance[0] = 0.0001;
+        imu_msg.angular_velocity_covariance[4] = 0.0001;
+        imu_msg.angular_velocity_covariance[8] = 0.0001;
+
+        imu_msg.linear_acceleration_covariance[0] = 0.04;
+        imu_msg.linear_acceleration_covariance[4] = 0.04;
+        imu_msg.linear_acceleration_covariance[8] = 0.04;
+
+        imu_msg.orientation_covariance[0] = 0.0025;
+        imu_msg.orientation_covariance[4] = 0.0025;
+        imu_msg.orientation_covariance[8] = 0.0025;
     #endif
 }
-
-
-PIDF Angle_Wheel1_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
-PIDF Angle_Wheel2_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
-PIDF Angle_Wheel3_pidf(PWM_Min, PWM_Max, Wheel_Spin_Motor_KP, Wheel_Spin_Motor_KI, Wheel_Spin_Motor_I_Min, Wheel_Spin_Motor_I_Max, Wheel_Spin_Motor_KD, Wheel_Spin_Motor_KF, Wheel_Spin_Motor_ERROR_TOLERANCE);
 
 
 DifferentialSwerveModule module_front(COUNTS_PER_REV1, GEAR_Ratio, 45.0, 10.0, 0.051, 0);
@@ -304,7 +329,7 @@ void setup()
 
 void loop()
 {
-    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+    // rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
     
 
     // EXECUTE_EVERY_N_MS(1000, digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)););
@@ -314,7 +339,7 @@ void loop()
     case WAITING_AGENT:
         // EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
         #if defined(ESP32)
-            EXECUTE_EVERY_N_MS(1000, state = (RMW_RET_OK == rmw_uros_ping_agent(500, 5)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+            EXECUTE_EVERY_N_MS(1200, state = (RMW_RET_OK == rmw_uros_ping_agent(600, 5)) ? AGENT_AVAILABLE : WAITING_AGENT;);
         #else
             EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
         #endif
@@ -328,14 +353,14 @@ void loop()
         break;
     case AGENT_CONNECTED:
         #if defined(ESP32)
-            EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(500, 5)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+            EXECUTE_EVERY_N_MS(700, state = (RMW_RET_OK == rmw_uros_ping_agent(600, 5)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
         #else
             EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
         #endif
         if (state == AGENT_CONNECTED)
         {
             #if defined(ESP32)
-                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(300));
+                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(500));
             #else
                 rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
             #endif
@@ -350,10 +375,24 @@ void loop()
     default:
         break;
     }
+    delay(10);
 }
 
 //------------------------------ < Fuction > -------------------------------------//
 
+
+#ifdef ESP32_HARDWARE2
+void imu_data(){
+    bno055.getIMUData(imu_msg);
+
+    struct timespec time_stamp = getTime();
+    imu_msg.header.stamp.sec = time_stamp.tv_sec;
+    imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+
+    rcl_publish(&imu_publisher, &imu_msg, NULL);
+
+}
+#endif
 
 
 void calculate_Stering() {
@@ -502,20 +541,17 @@ void calculate_Stering() {
     //Modle Front
     front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
     front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // front_L_speed = constrain(speed_front_L_pwm + angle1_correction, PWM_Min, PWM_Max) ;
-    // front_R_speed = constrain(speed_front_R_pwm - angle1_correction, PWM_Min, PWM_Max) ;
+
     //Modle Rear Left
     rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
     rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // rear_left_L_speed = constrain(speed_rearLeft_L_pwm + angle2_correction, PWM_Min, PWM_Max) ;
-    // rear_left_R_speed = constrain(speed_rearLeft_R_pwm - angle2_correction, PWM_Min, PWM_Max) ;
     
     #elif ESP32_HARDWARE2
     
     float speed_rearRight_L_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
     float speed_rearRight_R_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
     
-    angle3_correction = Angle_Wheel2_pidf.compute_with_error(WrapDegs(target_angle_rear_right - angle_rear_right));
+    angle3_correction = Angle_Wheel3_pidf.compute_with_error(WrapDegs(target_angle_rear_right - angle_rear_right));
 
     
     //Modle Rear Right
@@ -530,32 +566,31 @@ void calculate_Stering() {
     //Modle Rear Right
     rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
     rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-    // rear_right_L_speed = constrain(speed_rearRight_L_pwm + angle3_correction, PWM_Min, PWM_Max) ;
-    // rear_right_R_speed = constrain(speed_rearRight_R_pwm - angle3_correction, PWM_Min, PWM_Max) ;
-
-    // module3_msg.data.data[0] = rear_right_L_speed;
-    // module3_msg.data.data[1] = rear_right_R_speed;
     
     #endif
     // Move the motors with the calculated speeds
 
-    // if (!(AtTargetRange(angle_front, target_angle_front, 5.0) &&
-    //       AtTargetRange(angle_rear_left, target_angle_rear_left, 5.0) &&
-    //       AtTargetRange(angle_rear_right, target_angle_rear_right, 5.0)))
-    // {
-        MovePower(  angle1_correction, -angle1_correction,
-                    angle2_correction, -angle2_correction ,
-                    angle3_correction, -angle3_correction  );
-        
-    // } else {
-        // MovePower(  front_L_speed       ,front_R_speed,
-        //             rear_left_L_speed   ,rear_left_R_speed ,
-        //             rear_right_L_speed  ,   rear_right_R_speed  );
-    // }
+    bool all_wheels_aligned = 
+        AtTargetAngle(angle_front, target_angle_front, 3) &&
+        AtTargetAngle(angle_rear_left, target_angle_rear_left, 3) &&
+        AtTargetAngle(angle_rear_right, target_angle_rear_right, 3);
 
-    // MovePower(  -0   ,  0,
-    //             0   ,  -0,
-    //             angle3_correction, -angle3_correction  );
+    if (!all_wheels_aligned) {
+        // ปรับมุมทุกล้อก่อน
+        MovePower(
+            angle1_correction, -angle1_correction,
+            angle2_correction, -angle2_correction,
+            angle3_correction, -angle3_correction
+        );
+    } else {
+        // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
+        MovePower(
+            front_L_speed, front_R_speed,
+            rear_left_L_speed, rear_left_R_speed,
+            rear_right_L_speed, rear_right_R_speed
+        );
+    }
+
     }
     
     
@@ -666,6 +701,9 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
         getEncoderData();
         read_hall_sensor(); 
         calculate_Stering();
+        #ifdef ESP32_HARDWARE2
+            imu_data();
+        #endif
         publishData();
     }
 }
@@ -677,22 +715,6 @@ void cmd_vel_callback(const void * msgin)
     V_y = msg->linear.y;
     Omega_z = msg->angular.z;
 }
-void wheelMoveCallback(const void *msgin)
-{
-    prev_cmd_time = millis();
-    const geometry_msgs__msg__Twist *msg = (const geometry_msgs__msg__Twist *)msgin;
-    // motor1_target = moveMotor_msg.linear.x;
-    // motor2_target = moveMotor_msg.linear.y;
-    // motor3_target = moveMotor_msg.linear.z;
-}
-
-void movementModeCallback(const void *msgin)
-{
-    prev_cmd_time = millis();
-    const std_msgs__msg__String *msg = (const std_msgs__msg__String *)msgin;
-    movement_mode = movement_mode_msg.data.data;  // Copy it to global for later use
-}
-
 
 bool createEntities()
 {
@@ -747,6 +769,12 @@ bool createEntities()
         
     #elif ESP32_HARDWARE2
 
+        RCCHECK(rclc_publisher_init_default(
+            &imu_publisher,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+            "/imu/data"));
+
         RCCHECK(rclc_publisher_init_best_effort(
             &Modlue3_publisher,
             &node,
@@ -785,17 +813,6 @@ bool createEntities()
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "debug/wheel/cmd_vel/esp"));
 
-    RCCHECK(rclc_publisher_init_best_effort(
-        &debug_move_wheel_encoder_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "debug/wheel/encoder_rpm_esp"));
-
-    // RCCHECK(rclc_subscription_init_default(
-    //     &movement_mode_subscriber,
-    //     &node,
-    //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
-    //     "/movement_mode"));
 
     RCCHECK(rclc_subscription_init_default(
         &cmd_vel_subscriber,
@@ -804,7 +821,7 @@ bool createEntities()
         "/cmd_vel"));
         
     // create timer for control loop 1000/80 Hz
-    const unsigned int control_timeout = 100;
+    const unsigned int control_timeout = 175;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,
@@ -812,7 +829,7 @@ bool createEntities()
         &controlCallback));
         
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
     
     RCCHECK(rclc_executor_add_timer(&executor, &control_timer));
 
@@ -854,12 +871,6 @@ bool createEntities()
         &cmd_vel_callback,
         ON_NEW_DATA));
 
-    // RCCHECK(rclc_executor_add_subscription(
-    //     &executor,
-    //     &movement_mode_subscriber,
-    //     &movement_mode_msg,
-    //     &movementModeCallback,
-    //     ON_NEW_DATA));
 
     // synchronize time with the agent
     syncTime();
@@ -886,7 +897,8 @@ bool destroyEntities()
     rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
-    
+
+        rcl_publisher_fini(&imu_publisher, &node);
         rcl_publisher_fini(&Modlue3_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
         rcl_subscription_fini(&arm_position_servo_subscriber, &node);

@@ -3,7 +3,6 @@
 IMU_BNO055::IMU_BNO055() : bno(Adafruit_BNO055(55, 0x29)) {}
 
 bool IMU_BNO055::init() {
-  // Wire.begin(21, 22);
   if (!bno.begin()) {
     Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     return false;
