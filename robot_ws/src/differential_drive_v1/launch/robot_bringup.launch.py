@@ -53,7 +53,7 @@ def generate_launch_description():
             parameters=[ekf_config_path],
             remappings=[('/odometry/filtered', '/odom')]
         ),
-        nav_launch,
+        # nav_launch,
         # Node(
         #     package='differential_drive_v1',
         #     executable='robot_lidar.py',
