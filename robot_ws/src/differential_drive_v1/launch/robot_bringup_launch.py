@@ -12,11 +12,18 @@ import os
 def generate_launch_description():
     # กำหนด path ของไฟล์ config EKF
     diff_swerve_dir = get_package_share_directory('differential_drive_v1')
+    lidar_dir = get_package_share_directory('sllidar_ros2')
     ekf_config_path = PathJoinSubstitution([FindPackageShare('differential_drive_v1'), 'config', 'ekf.yaml'])
     
     nav_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(diff_swerve_dir, 'launch', 'navigate.launch.py')
+            os.path.join(diff_swerve_dir, 'launch', 'navigate_launch.py')
+        ),
+    )
+    
+    lidar_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(diff_swerve_dir, 'launch', 'view_sllidar_c1_launch.py')
         ),
     )
 
