@@ -19,18 +19,30 @@ def generate_launch_description():
             name='odom',
             output='screen'
         ),
+        # Static TF: odom -> base_link (จำเป็นสำหรับ navigation/localization)
+        # Node(
+        #     package='tf2_ros',
+        #     executable='static_transform_publisher',
+        #     name='odom_to_base_link',
+        #     arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_link']
+        # ),
+
+        # Static TF: base_link -> laser
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
             name='static_tf_pub_laser',
-            arguments=['0.0', '0', '0.35','0', '0', '0','base_link','laser']
+            arguments=['0.0', '0', '0.35', '0', '0', '0', 'base_link', 'laser']
         ),
+
+        # Static TF: base_link -> imu_link
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
             name='imu_tf_pub_laser',
-            arguments=['0.0', '0', '0.0','0.0', '0', '0','base_link','imu_link']
+            arguments=['0.0', '0', '0.0', '0.0', '0', '0', 'base_link', 'imu_link']
         ),
+        
         Node(
             package='robot_localization',
             executable='ekf_node',
@@ -63,12 +75,12 @@ def generate_launch_description():
         #     name='camera_tf_pub',
         #     arguments=['0.2', '0.0', '0.1', '0.0', '0.262', '0.0', 'base_link', 'camera_link']
         # ),
-        Node(
-            package='differential_drive_v1',
-            executable='robot_lidar.py',
-            name='robot_lidar',
-            output='screen'
-        ),
+        # Node(
+        #     package='differential_drive_v1',
+        #     executable='robot_lidar.py',
+        #     name='robot_lidar',
+        #     output='screen'
+        # ),
         # Node(
         #     package='differential_drive_v1',
         #     executable='manager',
