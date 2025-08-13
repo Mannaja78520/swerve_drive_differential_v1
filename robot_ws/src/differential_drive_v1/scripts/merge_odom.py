@@ -1,130 +1,161 @@
 #!/usr/bin/env python3
-
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import TransformStamped
 import numpy as np
-import tf2_ros
-from math import sin, cos
+from math import sin, cos, radians
 from message_filters import Subscriber, ApproximateTimeSynchronizer
-
-class merge_odom(Node):
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+class MergeOdom(Node):
     def __init__(self):
         super().__init__('merge_odom')
 
         # Robot config
         self.module_positions = {
-            0: (0.051, 0.0),         # Front
-            1: (-0.0255, -0.0441),   # Rear Right
-            2: (-0.0255, 0.0441),    # Rear Left
+            0: (0.051,  0.0),    # Front          <- /debug/module1
+            1: (-0.0255, 0.0441),# Rear Left      <- /debug/module2
+            2: (-0.0255,-0.0441) # Rear Right     <- /debug/module3
         }
 
-        self.wheel_radius = 0.02  # meters
-        self.ticks_per_rev = 2800.0
-        self.wheel_circ = 2 * np.pi * self.wheel_radius
+        self.wheel_radius   = 0.02        # m
+        self.ticks_per_rev  = 2800.0
+        self.wheel_circ     = 2*np.pi*self.wheel_radius
 
-        self.last_ticks = [None, None, None]
-        self.last_time = None
+        self.last_ticks = [None, None, None]  # avg tick of each module
+        self.last_time  = None
 
         # Robot state
-        self.x = 0.0
-        self.y = 0.0
-        self.theta = 0.0
-
-        self.frame_id = 'odom/raw'
+        self.x = 0.0; self.y = 0.0; self.theta = 0.0
+        self.frame_id = 'odom_raw'
         self.child_frame_id = 'base_link'
-        
-        # Subscribers (one per module)
-        self.sub0 = Subscriber(self, Float32MultiArray, '/differential_swerve_module_0')
-        self.sub1 = Subscriber(self, Float32MultiArray, '/differential_swerve_module_1')
-        self.sub2 = Subscriber(self, Float32MultiArray, '/differential_swerve_module_2')
 
-        self.ts = ApproximateTimeSynchronizer(
-            [self.sub0, self.sub1, self.sub2],
-            queue_size=10,
-            slop=0.05
-        )
+        # Subscribers (match MCU topics)
+                
+        qos_profile = QoSProfile(depth=10)
+        qos_profile.reliability = QoSReliabilityPolicy.BEST_EFFORT
+
+        self.sub1 = Subscriber(self, Float32MultiArray, '/debug/module1', qos_profile=qos_profile)
+        self.sub2 = Subscriber(self, Float32MultiArray, '/debug/module2', qos_profile=qos_profile)
+        self.sub3 = Subscriber(self, Float32MultiArray, '/debug/module3', qos_profile=qos_profile)
+
+        self.ts = ApproximateTimeSynchronizer([self.sub1, self.sub2, self.sub3],
+                                              queue_size=10, slop=0.2,
+                                              allow_headerless=True)
         self.ts.registerCallback(self.odom_callback)
 
-        # Publisher
         self.odom_pub = self.create_publisher(Odometry, '/odom/raw', 10)
-        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-    def odom_callback(self, msg0, msg1, msg2):
+    # --- Helpers to parse each module message ---
+    def parse_module_msg(self, msg: Float32MultiArray, module_index: int):
+        """
+        Return: (avg_tick or None, angle_rad, setzero_flag)
+        Supported formats:
+          Standard: [tickL, tickR, angle_deg, setzero, target_deg]
+          Special (module3 HARDWARE2): [angle_front_deg, target_front, angle_rr_deg, setzero, target_rr]
+        """
+        data = msg.data
+        n = len(data)
+        if n < 4:
+            return (None, None, False)
+
+        # Detect special format for module 3 (no ticks; angle at index 2)
+        if module_index == 2 and n >= 4 and abs(data[0]) <= 400 and abs(data[2]) <= 400:
+            # angle of rear-right is at index 2 (degrees). No ticks available.
+            angle_deg = float(data[2])
+            angle_rad = radians(angle_deg)
+            setzero   = (data[3] > 0.5)
+            return (None, angle_rad, setzero)
+
+        # Default (standard) format: ticks at [0],[1], angle (deg) at [2], setzero at [3]
+        tickL = float(data[0])
+        tickR = float(data[1])
+        angle_deg = float(data[2])
+        setzero   = (data[3] > 0.5)
+        avg_tick = (tickL + tickR) / 2.0
+        angle_rad = radians(angle_deg)  # convert deg → rad for math
+        return (avg_tick, angle_rad, setzero)
+
+    def odom_callback(self, msg1, msg2, msg3):
         now = self.get_clock().now()
 
-        ticks = []
-        angles = []
-        setzero_flags = []
+        # Parse 3 modules: 0=front(msg1),1=rear-left(msg2),2=rear-right(msg3)
+        parsed = [
+            self.parse_module_msg(msg1, 0),
+            self.parse_module_msg(msg2, 1),
+            self.parse_module_msg(msg3, 2),
+        ]
 
-        for msg in [msg0, msg1, msg2]:
-            tick_left = msg.data[0]
-            tick_right = msg.data[1]
-            angle = msg.data[2]
-            setzero = msg.data[3] > 0.5  # true if > 0.5
-
-            avg_tick = (tick_left + tick_right) / 2.0
-
-            ticks.append(avg_tick)
-            angles.append(angle)
-            setzero_flags.append(setzero)
-
-        # If any module is in setzero mode, reset baseline and skip odometry update
-        if any(setzero_flags):
-            self.get_logger().info("Setzero flag received. Resetting baseline ticks.")
-            for i in range(3):
-                self.last_ticks[i] = ticks[i]
+        # If any module asks for setzero → reset baseline ticks and time
+        if any(p[2] for p in parsed):
+            self.get_logger().info("Setzero flag received. Resetting baselines.")
+            for i, (avg_tick, _, _) in enumerate(parsed):
+                self.last_ticks[i] = avg_tick
             self.last_time = now
             return
 
+        # Initialize baselines on first run
         if self.last_time is None or any(t is None for t in self.last_ticks):
-            self.get_logger().info("Initializing baseline tick values...")
+            self.get_logger().info("Initializing baseline tick values…")
+            for i, (avg_tick, _, _) in enumerate(parsed):
+                self.last_ticks[i] = avg_tick
             self.last_time = now
-            for i in range(3):
-                self.last_ticks[i] = ticks[i]
             return
 
         dt = (now - self.last_time).nanoseconds / 1e9
+        if dt <= 0.0:
+            return
         self.last_time = now
 
-        A = []
-        b = []
+        A_rows = []
+        b_vals = []
 
-        for i in range(3):
-            delta_tick = ticks[i] - self.last_ticks[i]
-            self.last_ticks[i] = ticks[i]
+        # Build equations only from modules that have ticks (distance info)
+        for i, (avg_tick, angle_rad, _) in enumerate(parsed):
+            if angle_rad is None:
+                continue  # skip invalid data
 
-            distance = (delta_tick / self.ticks_per_rev) * self.wheel_circ
-            velocity = distance / dt
+            # delta from last ticks (if ticks exist)
+            if avg_tick is not None and self.last_ticks[i] is not None:
+                delta_tick = avg_tick - self.last_ticks[i]
+                self.last_ticks[i] = avg_tick
 
-            angle = angles[i]
-            vx = velocity * cos(angle)
-            vy = velocity * sin(angle)
+                distance = (delta_tick / self.ticks_per_rev) * self.wheel_circ
+                v = distance / dt
+            else:
+                # No tick available for this module → cannot get its wheel speed
+                # Skip contributing velocity constraints for this module
+                continue
+
+            # Project to robot frame
+            vx_i = v * cos(angle_rad)
+            vy_i = v * sin(angle_rad)
 
             x_i, y_i = self.module_positions[i]
+            # Constraints:
+            # vx_i = vx - omega * y_i
+            # vy_i = vy + omega * x_i
+            A_rows.append([1.0, 0.0, -y_i]); b_vals.append(vx_i)
+            A_rows.append([0.0, 1.0,  x_i]); b_vals.append(vy_i)
 
-            A.append([1, 0, -y_i])
-            A.append([0, 1,  x_i])
-            b.append(vx)
-            b.append(vy)
+        if len(A_rows) < 3:  # need at least 2 modules (4 rows) ideally; but 3 rows also solvable LS
+            # Not enough information this cycle
+            return
 
-        A = np.array(A)
-        b = np.array(b)
+        A = np.array(A_rows)
+        b = np.array(b_vals)
         sol, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
         vx, vy, omega = sol
 
-        # Update robot pose
+        # Integrate pose (world frame)
         dtheta = omega * dt
         self.theta += dtheta
 
         dx = vx * dt
         dy = vy * dt
-        dx_world = cos(self.theta) * dx - sin(self.theta) * dy
-        dy_world = sin(self.theta) * dx + cos(self.theta) * dy
-        self.x += dx_world
-        self.y += dy_world
+        c = cos(self.theta); s = sin(self.theta)
+        self.x += c*dx - s*dy
+        self.y += s*dx + c*dy
 
         # Publish odometry
         odom = Odometry()
@@ -134,56 +165,27 @@ class merge_odom(Node):
 
         odom.pose.pose.position.x = self.x
         odom.pose.pose.position.y = self.y
-        qz = sin(self.theta / 2)
-        qw = cos(self.theta / 2)
-        odom.pose.pose.orientation.z = qz
-        odom.pose.pose.orientation.w = qw
+        # yaw-only quaternion
+        odom.pose.pose.orientation.z = sin(self.theta/2.0)
+        odom.pose.pose.orientation.w = cos(self.theta/2.0)
 
-        odom.twist.twist.linear.x = vx
-        odom.twist.twist.linear.y = vy
+        odom.twist.twist.linear.x  = vx
+        odom.twist.twist.linear.y  = vy
         odom.twist.twist.angular.z = omega
 
         self.odom_pub.publish(odom)
 
-        # Broadcast TF
-        t = TransformStamped()
-        t.header.stamp = now.to_msg()
-        t.header.frame_id = self.frame_id
-        t.child_frame_id = self.child_frame_id
-        t.transform.translation.x = self.x
-        t.transform.translation.y = self.y
-        t.transform.rotation.z = qz
-        t.transform.rotation.w = qw
-        self.tf_broadcaster.sendTransform(t)
-
-
-def quaternion_from_euler(self, roll, pitch, yaw):
-        cy = np.cos(yaw * 0.5)
-        sy = np.sin(yaw * 0.5)
-        cp = np.cos(pitch * 0.5)
-        sp = np.sin(pitch * 0.5)
-        cr = np.cos(roll * 0.5)
-        sr = np.sin(roll * 0.5)
-        
-        q = [0] * 4
-        q[0] = cy * cp * cr + sy * sp * sr
-        q[1] = cy * cp * sr - sy * sp * cr
-        q[2] = sy * cp * sr + cy * sp * cr
-        q[3] = sy * cp * cr - cy * sp * sr
-        
-        return q
-
-
 def main():
     rclpy.init()
-    node = merge_odom()
+    node = MergeOdom()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

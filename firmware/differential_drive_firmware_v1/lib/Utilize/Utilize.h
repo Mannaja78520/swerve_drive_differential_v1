@@ -30,7 +30,7 @@ return degs;
 }
 
 bool AtTargetAngle(float current_angle, float target_angle, float tolerance) {
-    float diff = fabs(WrapDegs(target_angle - current_angle));
+    float diff = abs(WrapDegs(target_angle - current_angle));
     return diff <= tolerance;
 }
 

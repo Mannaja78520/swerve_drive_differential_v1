@@ -19,3 +19,9 @@ SUBSYSTEM=="tty", KERNELS=="1-1.2", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="
 sudo udevadm control --reload
 sudo udevadm trigger
 
+
+
+###############################
+sudo nano /etc/security/limits.conf
+<username> hard rtprio 99
+<username> soft rtprio 99

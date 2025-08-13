@@ -34,7 +34,7 @@ find_package(ament_index_cpp REQUIRED)
 # Install
 ################################################################################
 install(
-  DIRECTORY launch scripts config param map
+  DIRECTORY launch scripts config param map rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

@@ -12,7 +12,7 @@ class LidarClear(Node):
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=10
+            depth=200
         )
         
         self.subscription = self.create_subscription(

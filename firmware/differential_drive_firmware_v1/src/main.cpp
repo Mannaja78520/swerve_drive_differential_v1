@@ -60,10 +60,9 @@
     //------------------------------ < Define > -------------------------------------//
 
 rcl_publisher_t debug_cmd_vel_publisher;
-rcl_publisher_t debug_move_wheel_encoder_publisher;
-rcl_publisher_t Modlue1_publisher;
-rcl_publisher_t Modlue2_publisher;
-rcl_publisher_t Modlue3_publisher;
+rcl_publisher_t Module1_publisher;
+rcl_publisher_t Module2_publisher;
+rcl_publisher_t Module3_publisher;
 rcl_publisher_t debug_hall_sensor1_publisher;
 rcl_publisher_t debug_hall_sensor2_publisher;
 rcl_publisher_t debug_hall_sensor3_publisher;
@@ -162,7 +161,10 @@ enum states
 std::vector<Controller> motors;
 Servo Arm_Servo[2];
 
+#define RX_CAPACITY 5
+
 #ifdef ESP32_HARDWARE1
+    float module3_rx_buffer[RX_CAPACITY];
 
     PIDF front_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF front_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
@@ -185,6 +187,8 @@ Servo Arm_Servo[2];
     esp32_Encoder Encoder4(MOTOR4_ENCODER_PIN_A, MOTOR4_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR4_ENCODER_INV, MOTOR4_ENCODER_RATIO);
 
 #elif ESP32_HARDWARE2
+    float module1_rx_buffer[RX_CAPACITY];
+    float module2_rx_buffer[RX_CAPACITY];
 
     PIDF rear_right_L_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
     PIDF rear_right_R_pidf(PWM_Min, PWM_Max, Wheel_Motor_KP, Wheel_Motor_KI, Wheel_Motor_I_Min, Wheel_Motor_I_Max, Wheel_Motor_KD, Wheel_Motor_KF, Wheel_Motor_ERROR_TOLERANCE);
@@ -201,19 +205,32 @@ Servo Arm_Servo[2];
     #endif
 
 #ifdef ESP32_HARDWARE1
-void module3Callback(const void *msgin) {
-    angle_rear_right = module3_received_msg.data.data[2];
-    target_angle_rear_right = module3_received_msg.data.data[4];
+void module3Callback(const void * msgin) {
+  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+  // เซฟ size เผื่อ publisher ส่งมาไม่ครบ
+  size_t n = m->data.size;
+  if (n >= 5) {
+    angle_rear_right       = m->data.data[2];
+    target_angle_rear_right= m->data.data[4];
+  }
 }
 #elif ESP32_HARDWARE2
-void module1Callback(const void *msgin) {
-    angle_front = module1_received_msg.data.data[2];
-    target_angle_front = module1_received_msg.data.data[4];
+void module1Callback(const void * msgin) {
+  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+  size_t n = m->data.size;
+  if (n >= 5) {
+    angle_front       = m->data.data[2];
+    target_angle_front= m->data.data[4];
+  }
 }
 
-void module2Callback(const void *msgin) {
-    angle_rear_left = module2_received_msg.data.data[2];
-    target_angle_rear_left = module2_received_msg.data.data[4];
+void module2Callback(const void * msgin) {
+  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+  size_t n = m->data.size;
+  if (n >= 5) {
+    angle_rear_left       = m->data.data[2];
+    target_angle_rear_left= m->data.data[4];
+  }
 }
 
 void Arm_position(const void * msgin){
@@ -270,7 +287,7 @@ void rclErrorLoop();
 void syncTime();
 bool createEntities();
 bool destroyEntities();
-void flashLED(unsigned int);
+// void flashLED(unsigned int);
 struct timespec getTime();
 
 void publishData();
@@ -295,7 +312,32 @@ void setup()
         rosidl_runtime_c__float32__Sequence__init(&module1_msg.data, 5);
         rosidl_runtime_c__float32__Sequence__init(&module2_msg.data, 5);
         rosidl_runtime_c__float32__Sequence__init(&module3_msg.data, 5);
+        module1_msg.data.size = 5;
+        module2_msg.data.size = 5;
+        module3_msg.data.size = 5;
+        
+        // default values
+        for (size_t i = 0; i < 5; ++i) {
+            module1_msg.data.data[i] = 0.0f;
+            module2_msg.data.data[i] = 0.0f;
+            module3_msg.data.data[i] = 0.0f;
+        }
         set_microros_serial_transports(Serial);
+    #endif
+
+    // ----- bind incoming (subscribe) arrays to static buffers -----
+    #ifdef ESP32_HARDWARE1
+        module3_received_msg.data.data = module3_rx_buffer;
+        module3_received_msg.data.size = 0;                 // เริ่มรับให้ size=0
+        module3_received_msg.data.capacity = RX_CAPACITY;   // ความจุสูงสุด
+    #elif ESP32_HARDWARE2
+        module1_received_msg.data.data = module1_rx_buffer;
+        module1_received_msg.data.size = 0;
+        module1_received_msg.data.capacity = RX_CAPACITY;
+
+        module2_received_msg.data.data = module2_rx_buffer;
+        module2_received_msg.data.size = 0;
+        module2_received_msg.data.capacity = RX_CAPACITY;
     #endif
 }
 
@@ -347,7 +389,7 @@ void loop()
     default:
         break;
     }
-    delay(10);
+    // delay(10);
 }
 
 //------------------------------ < Fuction > -------------------------------------//
@@ -355,8 +397,18 @@ void loop()
 
 void calculate_Stering() {
     bool check = Check_setzero();
-    // bool check = false;
+    float front_L_speed = 0;
+    float front_R_speed = 0;
+    float rear_left_L_speed = 0;
+    float rear_left_R_speed = 0;
+    float rear_right_L_speed = 0;
+    float rear_right_R_speed = 0;
+    float angle1_correction = 0;
+    float angle2_correction = 0;
+    float angle3_correction = 0;
 
+    // bool check = false;
+    
     #ifdef ESP32_HARDWARE1
     ticks_L_front = Encoder1.read();
     ticks_R_front = Encoder2.read();
@@ -379,59 +431,37 @@ void calculate_Stering() {
     
     #endif
     
-    module1_msg.data.size = 5;
-    module2_msg.data.size = 5;
-    module3_msg.data.size = 5;
-    
-    // default values
-    module1_msg.data.data[0] = 0.0f;
-    module1_msg.data.data[1] = 0.0f;
-    module1_msg.data.data[2] = 0.0f;
-    module1_msg.data.data[3] = 0.0f;
-    module1_msg.data.data[4] = 0.0f;
-
-    module2_msg.data.data[0] = 0.0f;
-    module2_msg.data.data[1] = 0.0f;
-    module2_msg.data.data[2] = 0.0f;
-    module2_msg.data.data[3] = 0.0f;
-    module2_msg.data.data[4] = 0.0f;
-
-    module3_msg.data.data[0] = 0.0f;
-    module3_msg.data.data[1] = 0.0f;
-    module3_msg.data.data[2] = 0.0f;
-    module3_msg.data.data[3] = 0.0f;
-    module3_msg.data.data[4] = 0.0f;
     
     #ifdef ESP32_HARDWARE1
-        angle_front      = module_front.update_angle(ticks_L_front, ticks_R_front);
-        angle_rear_left  = module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
-        
-        auto module_front_cmd = module_front.kinematics(V_x, V_y, Omega_z);
-        auto module_rear_left_cmd = module_rear_left.kinematics(V_x, V_y, Omega_z);
-        
-        target_angle_front = module_front_cmd[0].second;
-        target_angle_rear_left = module_rear_left_cmd[0].second;
-
-
-        module1_msg.data.data[0] = ticks_L_front;
-        module1_msg.data.data[1] = ticks_R_front;
-        module1_msg.data.data[2] = angle_front ;
-        module1_msg.data.data[3] = check ? 1.0f : 0.0f;
-        module1_msg.data.data[4] = target_angle_front;
-        
-        module2_msg.data.data[0] = ticks_L_rear_left;
-        module2_msg.data.data[1] = ticks_R_rear_left;
-        module2_msg.data.data[2] = angle_rear_left;
-        module2_msg.data.data[3] = check ? 1.0f : 0.0f;
-        module2_msg.data.data[4] = target_angle_rear_left;
-
+    angle_front      = module_front.update_angle(ticks_L_front, ticks_R_front);
+    angle_rear_left  = module_rear_left.update_angle(ticks_L_rear_left, ticks_R_rear_left);
+    
+    auto module_front_cmd = module_front.kinematics(V_x, V_y, Omega_z);
+    auto module_rear_left_cmd = module_rear_left.kinematics(V_x, V_y, Omega_z);
+    
+    target_angle_front = module_front_cmd[0].second;
+    target_angle_rear_left = module_rear_left_cmd[0].second;
+    
+    
+    module1_msg.data.data[0] = ticks_L_front;
+    module1_msg.data.data[1] = ticks_R_front;
+    module1_msg.data.data[2] = angle_front ;
+    module1_msg.data.data[3] = check ? 1.0f : 0.0f;
+    module1_msg.data.data[4] = target_angle_front;
+    
+    module2_msg.data.data[0] = ticks_L_rear_left;
+    module2_msg.data.data[1] = ticks_R_rear_left;
+    module2_msg.data.data[2] = angle_rear_left;
+    module2_msg.data.data[3] = check ? 1.0f : 0.0f;
+    module2_msg.data.data[4] = target_angle_rear_left;
+    
     #elif ESP32_HARDWARE2
-        angle_rear_right = module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
-        
-        auto module_rear_right_cmd = module_rear_right.kinematics(V_x, V_y, Omega_z);
-
-        target_angle_rear_right = module_rear_right_cmd[0].second;
-
+    angle_rear_right = module_rear_right.update_angle(ticks_L_rear_right, ticks_R_rear_right);
+    
+    auto module_rear_right_cmd = module_rear_right.kinematics(V_x, V_y, Omega_z);
+    
+    target_angle_rear_right = module_rear_right_cmd[0].second;
+    
         module3_msg.data.data[0] = ticks_L_rear_right;
         module3_msg.data.data[1] = ticks_R_rear_right;
         module3_msg.data.data[2] = angle_rear_right;
@@ -448,15 +478,6 @@ void calculate_Stering() {
     
     debug_wheel_encoder_msg.angular.z = V_x;
     
-    float front_L_speed = 0;
-    float front_R_speed = 0;
-    float rear_left_L_speed = 0;
-    float rear_left_R_speed = 0;
-    float rear_right_L_speed = 0;
-    float rear_right_R_speed = 0;
-    float angle1_correction = 0;
-    float angle2_correction = 0;
-    float angle3_correction = 0;
     
     
     #ifdef ESP32_HARDWARE1
@@ -529,25 +550,25 @@ void calculate_Stering() {
     // Move the motors with the calculated speeds
 
     bool all_wheels_aligned = 
-        AtTargetAngle(angle_front, target_angle_front, 3) &&
-        AtTargetAngle(angle_rear_left, target_angle_rear_left, 3) &&
-        AtTargetAngle(angle_rear_right, target_angle_rear_right, 3);
+        AtTargetAngle(angle_front, target_angle_front, 10.0) &&
+        AtTargetAngle(angle_rear_left, target_angle_rear_left, 10.0) &&
+        AtTargetAngle(angle_rear_right, target_angle_rear_right, 10.0);
 
-    if (!all_wheels_aligned) {
-        // ปรับมุมทุกล้อก่อน
-        MovePower(
-            angle1_correction, -angle1_correction,
-            angle2_correction, -angle2_correction,
-            angle3_correction, -angle3_correction
-        );
-    } else {
-        // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
+    // if (!all_wheels_aligned) {
+    //     // ปรับมุมทุกล้อก่อน
+    //     MovePower(
+    //         angle1_correction, -angle1_correction,
+    //         angle2_correction, -angle2_correction,
+    //         angle3_correction, -angle3_correction
+    //     );
+    // } else {
+    //     // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
         MovePower(
             front_L_speed, front_R_speed,
             rear_left_L_speed, rear_left_R_speed,
             rear_right_L_speed, rear_right_R_speed
         );
-    }
+    // }
 
     }
     
@@ -577,8 +598,8 @@ void calculate_Stering() {
 
 void setzero(){
     
-    float search_speed_L = 425.0;  // ปรับความเร็วตามต้องการ
-    float search_speed_R = -425.0;
+    float search_speed_L = 400.0;  // ปรับความเร็วตามต้องการ
+    float search_speed_R = -400.0;
 
     #ifdef ESP32_HARDWARE1
     if (hall_sensor1) {
@@ -692,7 +713,7 @@ bool createEntities()
     #ifdef ESP32_HARDWARE1
     
         RCCHECK(rclc_publisher_init_best_effort(
-            &Modlue1_publisher,
+            &Module1_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
             "/debug/module1")); 
@@ -711,7 +732,7 @@ bool createEntities()
 
 
         RCCHECK(rclc_publisher_init_best_effort(
-            &Modlue2_publisher,
+            &Module2_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
             "/debug/module2"));
@@ -725,7 +746,7 @@ bool createEntities()
     #elif ESP32_HARDWARE2
 
         RCCHECK(rclc_publisher_init_best_effort(
-            &Modlue3_publisher,
+            &Module3_publisher,
             &node,
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
             "/debug/module3"));
@@ -770,7 +791,7 @@ bool createEntities()
         "/cmd_vel"));
         
     // create timer for control loop 1000/80 Hz
-    const unsigned int control_timeout = 175;
+    const unsigned int control_timeout = 100;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,
@@ -836,17 +857,16 @@ bool destroyEntities()
     // rcl_subscription_fini(&movement_mode_subscriber, &node);
 
     rcl_publisher_fini(&debug_cmd_vel_publisher, &node);
-    rcl_publisher_fini(&debug_move_wheel_encoder_publisher, &node);
     
     #ifdef ESP32_HARDWARE1
-    rcl_publisher_fini(&Modlue1_publisher, &node);
-    rcl_publisher_fini(&Modlue2_publisher, &node);
+    rcl_publisher_fini(&Module1_publisher, &node);
+    rcl_publisher_fini(&Module2_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor1_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor2_publisher, &node);
     rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
-        rcl_publisher_fini(&Modlue3_publisher, &node);
+        rcl_publisher_fini(&Module3_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
         rcl_subscription_fini(&arm_position_servo_subscriber, &node);
         rcl_subscription_fini(&module1_subscriber, &node);
@@ -902,16 +922,15 @@ void publishData()
     // rcl_publish(&debug_wheel_motor_RPM_publisher, &debug_wheel_motorRPM_msg, NULL);
     // rcl_publish(&debug_wheel_encoder_tick_publisher, &debug_wheel_encoder_tick_msg, NULL);
     rcl_publish(&debug_cmd_vel_publisher, &debug_wheel_motor_msg, NULL);
-    rcl_publish(&debug_move_wheel_encoder_publisher, &debug_wheel_encoder_msg, NULL);
 
     #ifdef ESP32_HARDWARE1
         rcl_publish(&debug_hall_sensor1_publisher, &hall_sensor1_msg, NULL);
         rcl_publish(&debug_hall_sensor2_publisher, &hall_sensor2_msg, NULL);
-        rcl_publish(&Modlue1_publisher, &module1_msg, NULL);
-        rcl_publish(&Modlue2_publisher, &module2_msg, NULL);
+        rcl_publish(&Module1_publisher, &module1_msg, NULL);
+        rcl_publish(&Module2_publisher, &module2_msg, NULL);
     #elif ESP32_HARDWARE2
         rcl_publish(&debug_hall_sensor3_publisher, &hall_sensor3_msg, NULL);
-        rcl_publish(&Modlue3_publisher, &module3_msg, NULL);
+        rcl_publish(&Module3_publisher, &module3_msg, NULL);
     #endif
 }
 
