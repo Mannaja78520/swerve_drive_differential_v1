@@ -27,13 +27,6 @@
 #include <esp32_Encoder.h>    
 #include <ESP32Servo.h>
 
-#ifdef ESP32_HARDWARE2
-    #include <sensor_msgs/msg/imu.h>
-    #include <imu_bno055.h>
-#endif
-
-
-
 #define RCCHECK(fn)                  \
     {                                \
         rcl_ret_t temp_rc = fn;      \
@@ -82,13 +75,10 @@ rcl_subscription_t cmd_vel_subscriber;
 rcl_subscription_t module3_subscriber;
 std_msgs__msg__Float32MultiArray module3_received_msg;
 #elif ESP32_HARDWARE2
-rcl_publisher_t imu_publisher;
-
 rcl_subscription_t module1_subscriber;
 rcl_subscription_t module2_subscriber;
 rcl_subscription_t arm_position_servo_subscriber;
 
-sensor_msgs__msg__Imu imu_msg;
 std_msgs__msg__Float32MultiArray module1_received_msg;
 std_msgs__msg__Float32MultiArray module2_received_msg;
 geometry_msgs__msg__Twist arm_pos_msg;
@@ -206,9 +196,6 @@ Servo Arm_Servo[2];
 
     esp32_Encoder Encoder5(MOTOR5_ENCODER_PIN_A, MOTOR5_ENCODER_PIN_B, COUNTS_PER_REV3, MOTOR5_ENCODER_INV, MOTOR5_ENCODER_RATIO);
     esp32_Encoder Encoder6(MOTOR6_ENCODER_PIN_A, MOTOR6_ENCODER_PIN_B, COUNTS_PER_REV4, MOTOR6_ENCODER_INV, MOTOR6_ENCODER_RATIO);
-
-    IMU_BNO055 bno055;
-
     const int servoPins[2] = {SERVO_BASE_PIN, SERVO_TOP_PIN};
     
     #endif
@@ -262,7 +249,6 @@ void setupComponent() {
         motors = {motor5, motor6};
         pinMode(Hall_Sensor3, INPUT_PULLUP);
 
-        bno055.init();
 
         Arm_Servo[0].setPeriodHertz(50);
         Arm_Servo[0].attach(servoPins[0], 500, 2500);
@@ -271,20 +257,6 @@ void setupComponent() {
         Arm_Servo[1].setPeriodHertz(50);
         Arm_Servo[1].attach(servoPins[1], 480, 2580);
         Arm_Servo[1].write(0);
-
-        imu_msg.header.frame_id.data = "imu_link";
-
-        imu_msg.angular_velocity_covariance[0] = 0.0001;
-        imu_msg.angular_velocity_covariance[4] = 0.0001;
-        imu_msg.angular_velocity_covariance[8] = 0.0001;
-
-        imu_msg.linear_acceleration_covariance[0] = 0.04;
-        imu_msg.linear_acceleration_covariance[4] = 0.04;
-        imu_msg.linear_acceleration_covariance[8] = 0.04;
-
-        imu_msg.orientation_covariance[0] = 0.0025;
-        imu_msg.orientation_covariance[4] = 0.0025;
-        imu_msg.orientation_covariance[8] = 0.0025;
     #endif
 }
 
@@ -379,20 +351,6 @@ void loop()
 }
 
 //------------------------------ < Fuction > -------------------------------------//
-
-
-#ifdef ESP32_HARDWARE2
-void imu_data(){
-    bno055.getIMUData(imu_msg);
-
-    struct timespec time_stamp = getTime();
-    imu_msg.header.stamp.sec = time_stamp.tv_sec;
-    imu_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-
-    rcl_publish(&imu_publisher, &imu_msg, NULL);
-
-}
-#endif
 
 
 void calculate_Stering() {
@@ -619,8 +577,8 @@ void calculate_Stering() {
 
 void setzero(){
     
-    float search_speed_L = 500.0;  // ปรับความเร็วตามต้องการ
-    float search_speed_R = -500.0;
+    float search_speed_L = 425.0;  // ปรับความเร็วตามต้องการ
+    float search_speed_R = -425.0;
 
     #ifdef ESP32_HARDWARE1
     if (hall_sensor1) {
@@ -701,9 +659,6 @@ void controlCallback(rcl_timer_t *timer, int64_t last_call_time)
         getEncoderData();
         read_hall_sensor(); 
         calculate_Stering();
-        #ifdef ESP32_HARDWARE2
-            imu_data();
-        #endif
         publishData();
     }
 }
@@ -768,12 +723,6 @@ bool createEntities()
             "/debug/module3"));
         
     #elif ESP32_HARDWARE2
-
-        RCCHECK(rclc_publisher_init_default(
-            &imu_publisher,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-            "/imu/data"));
 
         RCCHECK(rclc_publisher_init_best_effort(
             &Modlue3_publisher,
@@ -897,8 +846,6 @@ bool destroyEntities()
     rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
-
-        rcl_publisher_fini(&imu_publisher, &node);
         rcl_publisher_fini(&Modlue3_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
         rcl_subscription_fini(&arm_position_servo_subscriber, &node);
