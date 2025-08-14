@@ -1,54 +1,61 @@
 amcl:
   ros__parameters:
-    use_sim_time: false
-    alpha1: 0.05  # Reduced for faster updates
-    alpha2: 0.05  # Reduced for faster updates
-    alpha3: 0.2   # Increased for faster motion
-    alpha4: 0.2   # Increased for faster motion
-    alpha5: 0.05  # Reduced for faster updates
+    # ==== Frames / Topics ====
     base_frame_id: "base_link"
-    beam_skip_distance: 0.2  # Reduced for narrow map
-    beam_skip_error_threshold: 0.5
-    beam_skip_threshold: 0.3
-    do_beamskip: true
-    global_frame_id: "map"
-    lambda_short: 0.1
-    laser_likelihood_max_dist: 1.0  # Reduced for narrow map
-    laser_max_range: 5.0  # Reduced for narrow map
-    laser_min_range: 0.05
-    laser_model_type: "likelihood_field"
-    max_beams: 60  # Reduced for faster processing
-    max_particles: 5000  # Reduced for faster processing
-    min_particles: 1200   # Reduced for faster processing
     odom_frame_id: "odom"
-    pf_err: 0.01  # Reduced for better tracking
-    pf_z: 0.99
-    recovery_alpha_fast: 0.1
-    recovery_alpha_slow: 0.001
-    resample_interval: 1
-    robot_model_type: "nav2_amcl::DifferentialMotionModel"
-    save_pose_rate: 5.0
-    sigma_hit: 0.05
+    global_frame_id: "map"
     tf_broadcast: true
-    transform_tolerance: 0.5  # Reduced for faster updates
-    update_min_a: 0.0001  # Increased for faster updates
-    update_min_d: 0.0001  # Increased for faster updates
-    z_hit: 0.9
-    z_max: 0.05
-    z_rand: 0.05
-    z_short: 0.05
     scan_topic: "scan"
+    use_map_topic: true
     first_map_only: false
-    global_localization: false
 
-amcl_map_client:
-  ros__parameters:
-    use_sim_time: false
+    # ==== Laser model (เหมาะทางแคบ 35 ซม.) ====
+    laser_model_type: "likelihood_field"
+    # พิจารณาเฉพาะสิ่งกีดขวางใกล้ ๆ เพื่อความคมชัดในซอก
+    laser_likelihood_max_dist: 1.3     # ลองช่วง 1.0–1.5
+    max_beams: 50                      # 40–60 พอ; สูงไปจะช้า
 
-amcl_rclcpp_node:
-  ros__parameters:
-    use_sim_time: false
+    # น้ำหนักโมเดลเลเซอร์ (ค่ามาตรฐานดีแล้ว ปรับนิดหน่อย)
+    z_hit:   0.6
+    z_short: 0.05
+    z_max:   0.05
+    z_rand:  0.30
+    sigma_hit: 0.18                    # เบลอน้อยลงกว่าค่า default
 
+    # ==== Beam skipping (ช่วยข้ามลำสะท้อน/เสา) ====
+    do_beamskip: true
+    beam_skip_distance: 0.5
+    beam_skip_threshold: 0.3
+    beam_skip_error_threshold: 0.9
+
+    # ==== Motion model (Omni) – ลด noise ให้ tracking แน่นขึ้น ====
+    robot_model_type: "nav2_amcl::OmniMotionModel"
+    # alpha1..alpha5 ยิ่งเล็ก = เชื่อ odom มากขึ้น (หุ่นนิ่งแล้วไหล แปลว่าเดิมมันใหญ่ไป)
+    alpha1: 0.08   # rot noise on rot
+    alpha2: 0.06   # rot noise on trans
+    alpha3: 0.04   # trans noise on trans
+    alpha4: 0.06   # trans noise on rot
+    alpha5: 0.02   # side-slip (omni)
+
+    # ==== Particle filter ====
+    min_particles: 800                 # เริ่มกลาง ๆ
+    max_particles: 2500
+    pf_err: 0.05
+    pf_z: 0.99
+    resample_interval: 1
+    save_pose_rate: 0.5
+
+    # ==== Update cadence (ถี่ขึ้นเล็กน้อยสำหรับซอก) ====
+    update_min_d: 0.01                 # เดินนิดเดียวก็อัปเดต
+    update_min_a: 0.008                # หมุนน้อยก็อัปเดต
+
+    # ==== Timing / TF ====
+    transform_tolerance: 0.5
+    print_diagnostics: true
+
+    # ==== Range limits (ตาม Lidar ของคุณ) ====
+    laser_min_range: 0.12
+    laser_max_range: 3.0
 
 bt_navigator:
   ros__parameters:
@@ -77,7 +84,7 @@ controller_server:
     progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
-    use_realtime_priority: true
+    use_realtime_priority: false
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
@@ -171,72 +178,45 @@ controller_server:
 
 local_costmap:
   local_costmap:
-  
     ros__parameters:
       update_frequency: 12.0
       publish_frequency: 10.0
       global_frame: odom
       robot_base_frame: base_link
-      use_sim_time: false
       rolling_window: true
-      width: 1
-      height: 1
-      resolution: 0.05
+      width: 3
+      height: 3
+      resolution: 0.015
       robot_radius: 0.105
       footprint_padding: 0.0
       # ใช้ ObstacleLayer + InflationLayer (ตัด VoxelLayer ออกให้เรียบง่าย)
-      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        enabled: true
         observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
-          clearing: True
-          marking: True
+          clearing: true
+          marking: true
           data_type: "LaserScan"
+          raytrace_max_range: 2.5
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.0
+          obstacle_min_range: 0.0
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 0.07
-        inflation_radius: 0.3       # ช่อง 30 ซม.: 0.045 = margin ~5 ซม./ด้าน
-
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+        cost_scaling_factor: 11.0
+        inflation_radius: 0.042       # ช่อง 30 ซม.: 0.045 = margin ~5 ซม./ด้าน
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
 
       always_send_full_costmap: true
-
-      local_costmap_client:
-        ros__parameters:
-          use_sim_time: false
-      local_costmap_rclcpp_node:
-        ros__parameters:
-          use_sim_time: false
-
 
 global_costmap:
   global_costmap:
@@ -246,9 +226,9 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       robot_radius: 0.105
-      resolution: 0.05
+      resolution: 0.03
       track_unknown_space: true
-      plugins: ["static_layer", "obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -265,27 +245,6 @@ global_costmap:
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
 
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
-
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -293,22 +252,13 @@ global_costmap:
       # ให้ planner เห็นทางแคบได้ แต่ไม่บีบเกินไป
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 7.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 8.5
+        inflation_radius: 0.055
 
       always_send_full_costmap: true
 
-  global_costmap_client:
-    ros__parameters:
-      use_sim_time: false
-  global_costmap_rclcpp_node:
-    ros__parameters:
-      use_sim_time: false
-
 map_saver:
   ros__parameters:
-    use_sim_time: false
-    yaml_filename: "map.yaml"
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
@@ -321,7 +271,7 @@ planner_server:
     costmap_update_timeout: 1.0
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"
-      tolerance: 0.2
+      tolerance: 0.5
       use_astar: false
       allow_unknown: true
 
@@ -357,13 +307,13 @@ behavior_server:
     robot_base_frame: base_link
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
-    max_rotational_vel: 0.9
-    min_rotational_vel: 0.7
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
     rotational_acc_lim: 3.2
 
 waypoint_follower:
   ros__parameters:
-    loop_rate: 200
+    loop_rate: 20
     stop_on_failure: false
     action_server_result_timeout: 900.0
     waypoint_task_executor_plugin: "wait_at_waypoint"

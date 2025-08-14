@@ -54,6 +54,7 @@ install(PROGRAMS
   scripts/robot_main_state.py
   scripts/navigate.py
   scripts/robot_lidar.py
+  scripts/imu_axis_corrector.py
 
   DESTINATION lib/${PROJECT_NAME}
 )
