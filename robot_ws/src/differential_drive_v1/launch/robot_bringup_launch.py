@@ -21,6 +21,12 @@ def generate_launch_description():
         ),
     )
     
+    esp_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(diff_swerve_dir, 'launch', 'esp_microros_launch.py')
+        ),
+    )
+    
     lidar_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(lidar_dir, 'launch', 'view_sllidar_c1_launch.py')
@@ -28,6 +34,13 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        
+        # Node(
+        #     package='differential_drive_v1',
+        #     executable='imu_axis_corrector.py',
+        #     name='imu_corrector',
+        #     output='screen'
+        # ),
 
         Node(
             package='differential_drive_v1',
@@ -60,9 +73,9 @@ def generate_launch_description():
             parameters=[ekf_config_path],
             remappings=[('/odometry/filtered', '/odom')]
         ),
-        nav_launch,
+        # esp_launch,
         lidar_launch,
-        # nav_launch,
+        nav_launch,
         # Node(
         #     package='differential_drive_v1',
         #     executable='robot_lidar.py',
