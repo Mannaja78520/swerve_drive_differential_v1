@@ -1,12 +1,12 @@
 ### ekf config file ###
 ekf_filter_node:
   ros__parameters:
-    frequency: 50.0
+    frequency: 30.0
     odom0_nodelay: true
     sensor_timeout: 0.5
     two_d_mode: true
     transform_time_offset: 0.0
-    transform_timeout: 0.0
+    transform_timeout: 0.5
     print_diagnostics: true
     debug: false
     debug_out_file: /path/to/debug/file.txt

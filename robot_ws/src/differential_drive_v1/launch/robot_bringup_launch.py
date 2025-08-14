@@ -41,7 +41,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='static_tf_pub_laser',
-            arguments=['0.0', '0', '0.35', '0', '0', '0', 'base_link', 'laser']
+            arguments=['0.0', '0', '0.35', '3.141592653589793', '0', '0', 'base_link', 'laser']
         ),
 
         # Static TF: base_link -> imu_link
@@ -60,8 +60,9 @@ def generate_launch_description():
             parameters=[ekf_config_path],
             remappings=[('/odometry/filtered', '/odom')]
         ),
-        # nav_launch,
+        nav_launch,
         lidar_launch,
+        # nav_launch,
         # Node(
         #     package='differential_drive_v1',
         #     executable='robot_lidar.py',
