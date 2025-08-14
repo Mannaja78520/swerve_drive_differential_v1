@@ -205,7 +205,7 @@ bool createEntities()
             ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
             "/imu/data"));
     // create timer for control loop 1000/80 Hz
-    const unsigned int control_timeout = 20;
+    const unsigned int control_timeout = 40;
     RCCHECK(rclc_timer_init_default(
         &control_timer,
         &support,

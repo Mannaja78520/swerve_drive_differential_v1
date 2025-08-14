@@ -142,8 +142,8 @@ std::vector<std::pair<float, float>> DifferentialSwerveModule::kinematics(float 
     float y = pos.second;
 
     // Calculate velocity components for this module
-    float module_vx = Vx + (omega * y * omega_gain);
-    float module_vy = Vy - (omega * x * omega_gain);
+    float module_vx = Vx - (omega * y * omega_gain);
+    float module_vy = Vy + (omega * x * omega_gain);
 
     // Calculate desired speed (magnitude)
     float desired_speed = sqrt(module_vx*module_vx + module_vy*module_vy);
