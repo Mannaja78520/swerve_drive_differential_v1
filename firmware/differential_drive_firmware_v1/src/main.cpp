@@ -550,25 +550,25 @@ void calculate_Stering() {
     // Move the motors with the calculated speeds
 
     bool all_wheels_aligned = 
-        AtTargetAngle(angle_front, target_angle_front, 10.0) &&
-        AtTargetAngle(angle_rear_left, target_angle_rear_left, 10.0) &&
-        AtTargetAngle(angle_rear_right, target_angle_rear_right, 10.0);
+        AtTargetAngle(angle_front, target_angle_front, 5.0) &&
+        AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0) &&
+        AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
 
-    // if (!all_wheels_aligned) {
-    //     // ปรับมุมทุกล้อก่อน
-    //     MovePower(
-    //         angle1_correction, -angle1_correction,
-    //         angle2_correction, -angle2_correction,
-    //         angle3_correction, -angle3_correction
-    //     );
-    // } else {
-    //     // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
+    if (!all_wheels_aligned) {
+        // ปรับมุมทุกล้อก่อน
+        MovePower(
+            angle1_correction, -angle1_correction,
+            angle2_correction, -angle2_correction,
+            angle3_correction, -angle3_correction
+        );
+    } else {
+        // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
         MovePower(
             front_L_speed, front_R_speed,
             rear_left_L_speed, rear_left_R_speed,
             rear_right_L_speed, rear_right_R_speed
         );
-    // }
+    }
 
     }
     
