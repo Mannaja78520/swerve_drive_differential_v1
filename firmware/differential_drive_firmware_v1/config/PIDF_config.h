@@ -1,10 +1,10 @@
 #ifndef PIDF_CONFIG_H
 #define PIDF_CONFIG_H
 
-#define Wheel_Motor_KP 5.2
-#define Wheel_Motor_KI 0.005
+#define Wheel_Motor_KP 8.2
+#define Wheel_Motor_KI 0.015
 #define Wheel_Motor_KD 0.08
-#define Wheel_Motor_KF 0.3
+#define Wheel_Motor_KF 0.33
 #define Wheel_Motor_I_Max 1023
 #define Wheel_Motor_I_Min -Wheel_Motor_I_Max
 #define Wheel_Motor_ERROR_TOLERANCE 0
@@ -23,7 +23,7 @@
 #define Wheel_Spin_Motor_2_I_Max 150
 #define Wheel_Spin_Motor_2_I_Min -Wheel_Spin_Motor_2_I_Max
 
-#define Wheel_Spin_Motor_3_KP 46.5
+#define Wheel_Spin_Motor_3_KP 41.5
 #define Wheel_Spin_Motor_3_KI 1.0
 #define Wheel_Spin_Motor_3_KD 0.8
 #define Wheel_Spin_Motor_3_KF 0.0

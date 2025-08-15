@@ -25,7 +25,7 @@
 
 
 #include <esp32_Encoder.h>    
-#include <ESP32Servo.h>
+// #include <ESP32Servo.h>
 
 #define RCCHECK(fn)                  \
     {                                \
@@ -70,19 +70,19 @@ rcl_publisher_t debug_hall_sensor3_publisher;
 // rcl_subscription_t movement_mode_subscriber;
 rcl_subscription_t cmd_vel_subscriber;
 
-#ifdef ESP32_HARDWARE1
-rcl_subscription_t module3_subscriber;
-std_msgs__msg__Float32MultiArray module3_received_msg;
-#elif ESP32_HARDWARE2
-rcl_subscription_t module1_subscriber;
-rcl_subscription_t module2_subscriber;
-rcl_subscription_t arm_position_servo_subscriber;
+// #ifdef ESP32_HARDWARE1
+// // rcl_subscription_t module3_subscriber;
+// // std_msgs__msg__Float32MultiArray module3_received_msg;
+// #elif ESP32_HARDWARE2
+// rcl_subscription_t module1_subscriber;
+// rcl_subscription_t module2_subscriber;
+// rcl_subscription_t arm_position_servo_subscriber;
 
-std_msgs__msg__Float32MultiArray module1_received_msg;
-std_msgs__msg__Float32MultiArray module2_received_msg;
-geometry_msgs__msg__Twist arm_pos_msg;
+// std_msgs__msg__Float32MultiArray module1_received_msg;
+// std_msgs__msg__Float32MultiArray module2_received_msg;
+// geometry_msgs__msg__Twist arm_pos_msg;
 
-#endif
+// #endif
 
 std_msgs__msg__Bool hall_sensor1_msg;
 std_msgs__msg__Bool hall_sensor2_msg;
@@ -204,57 +204,57 @@ Servo Arm_Servo[2];
     
     #endif
 
-#ifdef ESP32_HARDWARE1
-void module3Callback(const void * msgin) {
-  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
-  // เซฟ size เผื่อ publisher ส่งมาไม่ครบ
-  size_t n = m->data.size;
-  if (n >= 5) {
-    angle_rear_right       = m->data.data[2];
-    target_angle_rear_right= m->data.data[4];
-  }
-}
-#elif ESP32_HARDWARE2
-void module1Callback(const void * msgin) {
-  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
-  size_t n = m->data.size;
-  if (n >= 5) {
-    angle_front       = m->data.data[2];
-    target_angle_front= m->data.data[4];
-  }
-}
+// #ifdef ESP32_HARDWARE1
+// // void module3Callback(const void * msgin) {
+// //   const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+// //   // เซฟ size เผื่อ publisher ส่งมาไม่ครบ
+// //   size_t n = m->data.size;
+// //   if (n >= 5) {
+// //     angle_rear_right       = m->data.data[2];
+// //     target_angle_rear_right= m->data.data[4];
+// //   }
+// // }
+// #elif ESP32_HARDWARE2
+// void module1Callback(const void * msgin) {
+//   const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+//   size_t n = m->data.size;
+//   if (n >= 5) {
+//     angle_front       = m->data.data[2];
+//     target_angle_front= m->data.data[4];
+//   }
+// }
 
-void module2Callback(const void * msgin) {
-  const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
-  size_t n = m->data.size;
-  if (n >= 5) {
-    angle_rear_left       = m->data.data[2];
-    target_angle_rear_left= m->data.data[4];
-  }
-}
+// void module2Callback(const void * msgin) {
+//   const std_msgs__msg__Float32MultiArray *m = (const std_msgs__msg__Float32MultiArray *)msgin;
+//   size_t n = m->data.size;
+//   if (n >= 5) {
+//     angle_rear_left       = m->data.data[2];
+//     target_angle_rear_left= m->data.data[4];
+//   }
+// }
 
-void Arm_position(const void * msgin){
+// // void Arm_position(const void * msgin){
     
-    const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
-    arm_pos_msg = *msg;
+//     const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
+//     arm_pos_msg = *msg;
 
-    float MainArm = arm_pos_msg.linear.x; // Main Arm Position
-    float SubArm = arm_pos_msg.angular.x; // Sub Arm Position
+//     float MainArm = arm_pos_msg.linear.x; // Main Arm Position
+//     float SubArm = arm_pos_msg.angular.x; // Sub Arm Position
 
-    Serial.print("MainArm: ");
-    Serial.print(MainArm);
-    Serial.print(" | SubArm: ");
-    Serial.println(SubArm);
+//     Serial.print("MainArm: ");
+//     Serial.print(MainArm);
+//     Serial.print(" | SubArm: ");
+//     Serial.println(SubArm);
 
 
-    int Pos_main_arm = map(MainArm, 0, 270, 500, 2500); // convert to 0 - 270 degrees to 500 - 2500 pulse 
-    int Pos_sub_arm = map(SubArm, 0, 180, 480, 2580); // convert to 0 - 270 degrees to 480 - 2580 pulse
+//     int Pos_main_arm = map(MainArm, 0, 270, 500, 2500); // convert to 0 - 270 degrees to 500 - 2500 pulse 
+//     int Pos_sub_arm = map(SubArm, 0, 180, 480, 2580); // convert to 0 - 270 degrees to 480 - 2580 pulse
 
-    Arm_Servo[0].writeMicroseconds(Pos_main_arm); // write the pulse to servo
-    Arm_Servo[1].writeMicroseconds(Pos_sub_arm); // write the pulse
+//     Arm_Servo[0].writeMicroseconds(Pos_main_arm); // write the pulse to servo
+//     Arm_Servo[1].writeMicroseconds(Pos_sub_arm); // write the pulse
     
-}
-#endif
+// }
+// #endif
        
 void setupComponent() {
     #ifdef ESP32_HARDWARE1
@@ -327,17 +327,17 @@ void setup()
 
     // ----- bind incoming (subscribe) arrays to static buffers -----
     #ifdef ESP32_HARDWARE1
-        module3_received_msg.data.data = module3_rx_buffer;
-        module3_received_msg.data.size = 0;                 // เริ่มรับให้ size=0
-        module3_received_msg.data.capacity = RX_CAPACITY;   // ความจุสูงสุด
+        // module3_received_msg.data.data = module3_rx_buffer;
+        // module3_received_msg.data.size = 0;                 // เริ่มรับให้ size=0
+        // module3_received_msg.data.capacity = RX_CAPACITY;   // ความจุสูงสุด
     #elif ESP32_HARDWARE2
-        module1_received_msg.data.data = module1_rx_buffer;
-        module1_received_msg.data.size = 0;
-        module1_received_msg.data.capacity = RX_CAPACITY;
+        // module1_received_msg.data.data = module1_rx_buffer;
+        // module1_received_msg.data.size = 0;
+        // module1_received_msg.data.capacity = RX_CAPACITY;
 
-        module2_received_msg.data.data = module2_rx_buffer;
-        module2_received_msg.data.size = 0;
-        module2_received_msg.data.capacity = RX_CAPACITY;
+        // module2_received_msg.data.data = module2_rx_buffer;
+        // module2_received_msg.data.size = 0;
+        // module2_received_msg.data.capacity = RX_CAPACITY;
     #endif
 }
 
@@ -470,28 +470,49 @@ void calculate_Stering() {
         angle3_correction = Angle_Wheel3_pidf.compute_with_error(WrapDegs(target_angle_rear_right - angle_rear_right));
     #endif
 
-    bool angle1_aligned = AtTargetAngle(angle_front, target_angle_front, 5.0);
-    bool angle2_aligned = AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0);
-    bool angle3_aligned = AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
+    // bool angle1_aligned = AtTargetAngle(angle_front, target_angle_front, 5.0);
+    // bool angle2_aligned = AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0);
+    // bool angle3_aligned = AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
 
-    bool all_wheels_aligned = 
-        angle1_aligned &&
-        angle2_aligned &&
-        angle3_aligned;
+    // bool all_wheels_aligned = 
+    //     angle1_aligned &&
+    //     angle2_aligned &&
+    //     angle3_aligned;
 
-    if (!all_wheels_aligned && abs(Omega_z) <= (0.05)) {
-        // angle1_correction = angle1_aligned ? 0 : SigNum(angle1_correction) * -400;
-        // angle2_correction = angle2_aligned ? 0 : SigNum(angle2_correction) * -400;
-        // angle3_correction = angle3_aligned ? 0 : SigNum(angle3_correction) * -400;
+    // if (!all_wheels_aligned && abs(Omega_z) <= (0.05)) {
+    //     // angle1_correction = angle1_aligned ? 0 : SigNum(angle1_correction) * -400;
+    //     // angle2_correction = angle2_aligned ? 0 : SigNum(angle2_correction) * -400;
+    //     // angle3_correction = angle3_aligned ? 0 : SigNum(angle3_correction) * -400;
 
-        // ปรับมุมทุกล้อก่อน
-        MovePower(
-            angle1_correction, -angle1_correction,
-            angle2_correction, -angle2_correction,
-            angle3_correction, -angle3_correction
-        );
-        return;
-    } 
+    //     // ปรับมุมทุกล้อก่อน
+    //     MovePower(
+    //         angle1_correction, -angle1_correction,
+    //         angle2_correction, -angle2_correction,
+    //         angle3_correction, -angle3_correctionbool angle1_aligned = AtTargetAngle(angle_front, target_angle_front, 5.0);
+    // bool angle2_aligned = AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0);
+    // bool angle3_aligned = AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
+
+    // bool all_wheels_aligned = 
+    //     angle1_aligned &&
+    //     angle2_aligned &&
+    //     angle3_aligned;
+
+    // if (!all_wheels_aligned && abs(Omega_z) <= (0.05)) {
+    //     // angle1_correction = angle1_aligned ? 0 : SigNum(angle1_correction) * -400;
+    //     // angle2_correction = angle2_aligned ? 0 : SigNum(angle2_correction) * -400;
+    //     // angle3_correction = angle3_aligned ? 0 : SigNum(angle3_correction) * -400;
+
+    //     // ปรับมุมทุกล้อก่อน
+    //     MovePower(
+    //         angle1_correction, -angle1_correction,
+    //         angle2_correction, -angle2_correction,
+    //         angle3_correction, -angle3_correction
+    //     );
+    //     return;
+    // } 
+    //     );
+    //     return;
+    // } 
     #ifdef ESP32_HARDWARE1
         // Calculate the RPM for each wheel
         float speed_front_L_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
@@ -725,11 +746,11 @@ bool createEntities()
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
             "/debug/module2"));
 
-        RCCHECK(rclc_subscription_init_best_effort(
-            &module3_subscriber,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-            "/debug/module3"));
+        // RCCHECK(rclc_subscription_init_best_effort(
+        //     &module3_subscriber,
+        //     &node,
+        //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        //     "/debug/module3"));
         
     #elif ESP32_HARDWARE2
 
@@ -745,23 +766,23 @@ bool createEntities()
             ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
             "/debug/hall_sensor3"));
             
-        RCCHECK(rclc_subscription_init_best_effort(
-            &module1_subscriber,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-            "/debug/module1"));
+        // RCCHECK(rclc_subscription_init_best_effort(
+        //     &module1_subscriber,
+        //     &node,
+        //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        //     "/debug/module1"));
 
-        RCCHECK(rclc_subscription_init_best_effort(
-            &module2_subscriber,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-            "/debug/module2"));
+        // RCCHECK(rclc_subscription_init_best_effort(
+        //     &module2_subscriber,
+        //     &node,
+        //     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+        //     "/debug/module2"));
 
-        RCCHECK(rclc_subscription_init_default(
-            &arm_position_servo_subscriber,
-            &node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-            "/servo_position"));
+        // RCCHECK(rclc_subscription_init_default(
+        //     &arm_position_servo_subscriber,
+        //     &node,
+        //     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        //     "/servo_position"));
 
         #endif
 
@@ -787,40 +808,40 @@ bool createEntities()
         &controlCallback));
         
     executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
+    RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
     
     RCCHECK(rclc_executor_add_timer(&executor, &control_timer));
 
-    #ifdef ESP32_HARDWARE1
-        RCCHECK(rclc_executor_add_subscription(
-            &executor,
-            &module3_subscriber,
-            &module3_received_msg,
-            &module3Callback,
-            ON_NEW_DATA));
+    // #ifdef ESP32_HARDWARE1
+    //     // RCCHECK(rclc_executor_add_subscription(
+    //     //     &executor,
+    //     //     &module3_subscriber,
+    //     //     &module3_received_msg,
+    //     //     &module3Callback,
+    //     //     ON_NEW_DATA));
         
-    #elif ESP32_HARDWARE2
-        RCCHECK(rclc_executor_add_subscription(
-            &executor,
-            &module1_subscriber,
-            &module1_received_msg,
-            &module1Callback,
-            ON_NEW_DATA));
+    // #elif ESP32_HARDWARE2
+    //     RCCHECK(rclc_executor_add_subscription(
+    //         &executor,
+    //         &module1_subscriber,
+    //         &module1_received_msg,
+    //         &module1Callback,
+    //         ON_NEW_DATA));
 
-        RCCHECK(rclc_executor_add_subscription(
-            &executor,
-            &module2_subscriber,
-            &module2_received_msg,
-            &module2Callback,
-            ON_NEW_DATA));
+    //     RCCHECK(rclc_executor_add_subscription(
+    //         &executor,
+    //         &module2_subscriber,
+    //         &module2_received_msg,
+    //         &module2Callback,
+    //         ON_NEW_DATA));
 
-        RCCHECK(rclc_executor_add_subscription(
-            &executor,
-            &arm_position_servo_subscriber,
-            &arm_pos_msg,
-            &Arm_position,
-            ON_NEW_DATA));
-    #endif
+    //     RCCHECK(rclc_executor_add_subscription(
+    //         &executor,
+    //         &arm_position_servo_subscriber,
+    //         &arm_pos_msg,
+    //         &Arm_position,
+    //         ON_NEW_DATA));
+    // #endif
     
     RCCHECK(rclc_executor_add_subscription(
         &executor,
@@ -851,14 +872,14 @@ bool destroyEntities()
     rcl_publisher_fini(&Module2_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor1_publisher, &node);
     rcl_publisher_fini(&debug_hall_sensor2_publisher, &node);
-    rcl_subscription_fini(&module3_subscriber, &node);
+    // rcl_subscription_fini(&module3_subscriber, &node);
 
     #elif ESP32_HARDWARE2
         rcl_publisher_fini(&Module3_publisher, &node);
         rcl_publisher_fini(&debug_hall_sensor3_publisher, &node);
-        rcl_subscription_fini(&arm_position_servo_subscriber, &node);
-        rcl_subscription_fini(&module1_subscriber, &node);
-        rcl_subscription_fini(&module2_subscriber, &node);
+        // rcl_subscription_fini(&arm_position_servo_subscriber, &node);
+        // rcl_subscription_fini(&module1_subscriber, &node);
+        // rcl_subscription_fini(&module2_subscriber, &node);
 
         Arm_Servo[0].detach();
         Arm_Servo[1].detach();
