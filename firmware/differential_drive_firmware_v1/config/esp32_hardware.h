@@ -10,7 +10,7 @@
     #define ENCODER1_PULSES_PER_REVOLUTION 700                               // encoder 1 pulse
     #define ENCODER2_PULSES_PER_REVOLUTION 700                               // encoder 2 pulse
     #define ENCODER3_PULSES_PER_REVOLUTION 700                               // encoder 3 pulse
-    #define ENCODER4_PULSES_PER_REVOLUTION 700                               // encoder 4 pulse
+    #define ENCODER4_PULSES_PER_REVOLUTION 700                               // encoder 4 1pulse
     #define ENCODER_TICKS 4                                                 // encoder ticks
     #define COUNTS_PER_REV1 ENCODER1_PULSES_PER_REVOLUTION * ENCODER_TICKS  // wheel1 encoder's no of ticks per rev
     #define COUNTS_PER_REV2 ENCODER1_PULSES_PER_REVOLUTION * ENCODER_TICKS  // wheel2 encoder's no of ticks per rev

@@ -475,71 +475,71 @@ void calculate_Stering() {
         AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0) &&
         AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
 
-    if (!all_wheels_aligned) {
+    if (!all_wheels_aligned && abs(Omega_z) <= (0.05)) {
         // ปรับมุมทุกล้อก่อน
         MovePower(
             angle1_correction, -angle1_correction,
             angle2_correction, -angle2_correction,
             angle3_correction, -angle3_correction
         );
-    } else {
-        #ifdef ESP32_HARDWARE1
-            // Calculate the RPM for each wheel
-            float speed_front_L_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
-            float speed_front_R_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
-            float speed_rearLeft_L_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
-            float speed_rearLeft_R_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
+        return;
+    } 
+    #ifdef ESP32_HARDWARE1
+        // Calculate the RPM for each wheel
+        float speed_front_L_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
+        float speed_front_R_rpm = MPSToRPM(module_front_cmd[0].first, WHEEL_DIAMETER);
+        float speed_rearLeft_L_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
+        float speed_rearLeft_R_rpm = MPSToRPM(module_rear_left_cmd[0].first, WHEEL_DIAMETER);
 
-            //Modle Front
-            float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
-            float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
-            //Modle Rear Left
-            float speed_rearLeft_L_pwm = rear_left_L_pidf.compute(speed_rearLeft_L_rpm, rpm_rear_left_L);
-            float speed_rearLeft_R_pwm = rear_left_R_pidf.compute(speed_rearLeft_R_rpm, rpm_rear_left_R);
-            
-            
-            // Calculate the maximum PWM for each wheel to normalize the speed
-            //Modle Front
-            float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
-            float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
-            //Modle Rear Left
-            float rear_left_L_d = max(abs(speed_rearLeft_L_pwm) + abs(angle2_correction), (float) PWM_Max);
-            float rear_left_R_d = max(abs(speed_rearLeft_R_pwm) + abs(angle2_correction), (float) PWM_Max);
-            
-            // Combine steering and driving commands into final PWM output (normalized)
-            //Modle Front
-            front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-            front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        //Modle Front
+        float speed_front_L_pwm = front_L_pidf.compute(speed_front_L_rpm, rpm_front_L);
+        float speed_front_R_pwm = front_R_pidf.compute(speed_front_R_rpm, rpm_front_R);
+        //Modle Rear Left
+        float speed_rearLeft_L_pwm = rear_left_L_pidf.compute(speed_rearLeft_L_rpm, rpm_rear_left_L);
+        float speed_rearLeft_R_pwm = rear_left_R_pidf.compute(speed_rearLeft_R_rpm, rpm_rear_left_R);
+        
+        
+        // Calculate the maximum PWM for each wheel to normalize the speed
+        //Modle Front
+        float front_L_d = max(abs(speed_front_L_pwm) + abs(angle1_correction), (float) PWM_Max);
+        float front_R_d = max(abs(speed_front_R_pwm) + abs(angle1_correction), (float) PWM_Max);
+        //Modle Rear Left
+        float rear_left_L_d = max(abs(speed_rearLeft_L_pwm) + abs(angle2_correction), (float) PWM_Max);
+        float rear_left_R_d = max(abs(speed_rearLeft_R_pwm) + abs(angle2_correction), (float) PWM_Max);
+        
+        // Combine steering and driving commands into final PWM output (normalized)
+        //Modle Front
+        front_L_speed = constrain(((speed_front_L_pwm + angle1_correction)/ front_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        front_R_speed = constrain(((speed_front_R_pwm - angle1_correction)/ front_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
 
-            //Modle Rear Left
-            rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-            rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-            
-        #elif ESP32_HARDWARE2
-            
-            float speed_rearRight_L_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
-            float speed_rearRight_R_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
+        //Modle Rear Left
+        rear_left_L_speed = constrain(((speed_rearLeft_L_pwm + angle2_correction)/ rear_left_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        rear_left_R_speed = constrain(((speed_rearLeft_R_pwm - angle2_correction)/ rear_left_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        
+    #elif ESP32_HARDWARE2
+        
+        float speed_rearRight_L_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
+        float speed_rearRight_R_rpm = MPSToRPM(module_rear_right_cmd[0].first, WHEEL_DIAMETER);
 
-            float speed_rearRight_L_pwm = rear_right_L_pidf.compute(speed_rearRight_L_rpm, rpm_rear_right_L);
-            float speed_rearRight_R_pwm = rear_right_R_pidf.compute(speed_rearRight_R_rpm, rpm_rear_right_R);
-            
-            float rear_right_L_d = max(abs(speed_rearRight_L_pwm) + abs(angle3_correction), (float) PWM_Max);
-            float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
+        float speed_rearRight_L_pwm = rear_right_L_pidf.compute(speed_rearRight_L_rpm, rpm_rear_right_L);
+        float speed_rearRight_R_pwm = rear_right_R_pidf.compute(speed_rearRight_R_rpm, rpm_rear_right_R);
+        
+        float rear_right_L_d = max(abs(speed_rearRight_L_pwm) + abs(angle3_correction), (float) PWM_Max);
+        float rear_right_R_d = max(abs(speed_rearRight_R_pwm) + abs(angle3_correction), (float) PWM_Max);
 
-            //Modle Rear Right
-            rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
-            rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
-            
-        #endif
-        // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
-        MovePower(
-            front_L_speed, front_R_speed,
-            rear_left_L_speed, rear_left_R_speed,
-            rear_right_L_speed, rear_right_R_speed
-        );
-    }
+        //Modle Rear Right
+        rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+        
+    #endif
+    // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
+    MovePower(
+        front_L_speed, front_R_speed,
+        rear_left_L_speed, rear_left_R_speed,
+        rear_right_L_speed, rear_right_R_speed
+    );
 
-    }
+}
     
     
     bool Check_setzero() {

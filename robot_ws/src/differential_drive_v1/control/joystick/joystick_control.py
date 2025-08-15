@@ -87,7 +87,7 @@ class Joystick(Node):
         )
 
         self.gamepad = Gamepad()
-        self.maxlinear_speed = 0.6  # m/s max
+        self.maxlinear_speed = 0.2  # m/s max
         self.maxspeed : float = self.maxlinear_speed
         self.maxpwm_speed = 1023.0  # PWM max speed
         
@@ -185,7 +185,7 @@ class Joystick(Node):
     
         cmd_vel_move.linear.x = float(self.gamepad.ly * self.maxspeed)
         cmd_vel_move.linear.y = float(self.gamepad.lx * self.maxspeed * -1)
-        cmd_vel_move.angular.z = float(self.gamepad.rx * self.maxspeed * -1)
+        cmd_vel_move.angular.z = float(self.gamepad.rx * self.maxspeed * -6)
 
         self.pub_move.publish(cmd_vel_move)
 

@@ -1,0 +1,79 @@
+slam_toolbox:
+  ros__parameters:
+    # เฟรมและหัวข้อ
+    map_frame: map
+    base_frame: base_link
+    odom_frame: odom
+    scan_topic: /scan
+    
+    # โหมดการทำงาน
+    mode: sync          # ใช้โหมด sync แทน async เพื่อลดปัญหาการตกของข้อความ
+    debug_logging: true # เปิดการบันทึกล็อกเพื่อการแก้ไขข้อผิดพลาด
+    use_pose_extrapolator: true
+    
+    # พารามิเตอร์สำหรับการจัดการข้อความและ transform
+    transform_timeout: 2.0           # เพิ่มเวลารอการแปลงตำแหน่ง
+    tf_buffer_duration: 30.0         # เพิ่มระยะเวลาเก็บประวัติ transform
+    minimum_time_interval: 0.2       # ช่วงเวลาต่ำสุดระหว่างการประมวลผลข้อความ
+    map_update_interval: 5.0         # ช่วงเวลาในการอัปเดตแผนที่ (เพิ่มขึ้นเพื่อลดการใช้ทรัพยากร)
+    stack_size_to_use: 40000000      # เพิ่มขนาดสแตกเพื่อรองรับการประมวลผลที่มากขึ้น
+    incoming_queue_size: 200         # เพิ่มขนาดคิวสำหรับข้อความ
+    
+    # พารามิเตอร์การทำแผนที่
+    resolution: 0.05                 # ความละเอียดของแผนที่ (เมตร)
+    max_laser_range: 5.0             # ระยะการตรวจจับสูงสุดของเลเซอร์ (เมตร)
+    minimum_travel_distance: 0.5     # ระยะทางขั้นต่ำที่ต้องเคลื่อนที่ก่อนสร้างคีย์เฟรมใหม่
+    minimum_travel_heading: 0.5      # การหมุนขั้นต่ำก่อนสร้างคีย์เฟรมใหม่ (เรเดียน)
+    scan_buffer_size: 10             # จำนวนสแกนที่เก็บไว้ในบัฟเฟอร์
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 5.0
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+    
+    # พารามิเตอร์การจับคู่สแกน
+    use_scan_matching: true
+    use_scan_barycenter: true
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_max_num_iterations: 500
+    ceres_preconditioner: JACOBI
+    ceres_trust_region_strategy_type: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None        # ตัวเลือก: None, HuberLoss, CauchyLoss
+    
+    # พารามิเตอร์ขั้นสูง
+    enable_interactive_mode: false
+    
+    # พารามิเตอร์การค้นหาตำแหน่ง
+    max_correspondence_distance: 0.3  # ระยะทางสูงสุดสำหรับการจับคู่จุด
+    max_angular_correction_deg: 45.0 # การแก้ไขมุมสูงสุดต่อการทำซ้ำ
+    max_linear_correction: 0.5       # การแก้ไขระยะทางสูงสุดต่อการทำซ้ำ
+    max_iterations: 1000             # จำนวนการทำซ้ำสูงสุดในการจับคู่สแกน
+    
+    # พารามิเตอร์ Optimizer
+    optimization_solve_time_sec: 0.25
+    optimizer_thread_count: 3        # จำนวนเธรดสำหรับ optimizer
+    
+    # พารามิเตอร์เสริม
+    calculate_covariance: false     # อาจใช้ทรัพยากรสูง ควรปิดถ้าไม่จำเป็น
+    toolbox_directory: ""           # โฟลเดอร์สำหรับเก็บข้อมูล
+    
+    # พารามิเตอร์การใช้งาน imu และ odometry
+    use_odom: true
+    use_imu: false                   # เปิดใช้งาน IMU ถ้ามี
+    imu_topic: /imu 
+    
+    # เมื่อเปิดใช้งาน IMU
+    imu_calibration_type: None
+    imu_yaw_offset: 0.0
+    
+    # พารามิเตอร์จำเพาะกับ solver
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_submission_buffer_size: 10
+    ceres_pose_last_used: true
+    ceres_residual_type: NORMALIZED_ERROR
+    ceres_loss_type: SCALED_LOSS

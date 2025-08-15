@@ -21,7 +21,7 @@ class MergeOdom(Node):
             2: (-0.0255,-0.0441),  # Rear-Right
         }
 
-        self.wheel_radius  = 0.02                     # m
+        self.wheel_radius  = 0.0205                     # m
         self.wheel_circ    = 2 * np.pi * self.wheel_radius
 
         # -------- Invert/offset ให้สอดคล้องกับ MCU --------
@@ -37,9 +37,9 @@ class MergeOdom(Node):
             2: -1.0,
         }
         self.angle_offset_deg = { # ออฟเซ็ตมุมต่อโมดูล (deg)
-            0: 0.0,
-            1: 0.0,
-            2: 0.0,
+            0: -90.0,
+            1: 30.0,
+            2: 150.0,
         }
 
         # ticks ต่อ "รอบล้อ" (ถ้า encoder อยู่ที่เพลามอเตอร์ ให้คูณเกียร์รวมทางขับ)
@@ -74,7 +74,7 @@ class MergeOdom(Node):
         # ตัวกรองกำลังเลี้ยว / deadband / clamp
         self.v_deadband_mps   = 0.02     # m/s ต่ำกว่านี้ปัดเป็น 0 (เข้มขึ้นเล็กน้อย)
         self.steering_thresh  = 0.6      # |dL-dR| / (|dL|+|dR|) > thresh => ถือว่าเลี้ยว
-        self.max_abs_omega    = 1.0      # rad/s จำกัดผล LS ไม่ให้หลุด
+        self.max_abs_omega    = 3.0      # rad/s จำกัดผล LS ไม่ให้หลุด
 
         # Subscribers
         qos_profile = QoSProfile(depth=10)

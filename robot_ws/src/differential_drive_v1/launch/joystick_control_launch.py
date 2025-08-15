@@ -39,7 +39,7 @@ def generate_launch_description():
 
     movement_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(package_dir, 'launch', 'robot_movement.launch.py')
+            os.path.join(package_dir, 'launch', 'robot_movement_launch.py')
         )
     )
     
