@@ -397,6 +397,8 @@ void loop()
 
 void calculate_Stering() {
     bool check = Check_setzero();
+    V_x = SigNum(V_x) * 0.09;
+    V_y = SigNum(V_y) * 0.09;
     float front_L_speed = 0;
     float front_R_speed = 0;
     float rear_left_L_speed = 0;
@@ -538,6 +540,7 @@ void calculate_Stering() {
         //Modle Rear Right
         rear_right_L_speed = constrain(((speed_rearRight_L_pwm + angle3_correction)/ rear_right_L_d) * PWM_Max, PWM_Min, PWM_Max) ;
         rear_right_R_speed = constrain(((speed_rearRight_R_pwm - angle3_correction)/ rear_right_R_d) * PWM_Max, PWM_Min, PWM_Max) ;
+
         
     #endif
     // เมื่อทุกล้อพร้อมแล้ว ค่อยเคลื่อนที่
