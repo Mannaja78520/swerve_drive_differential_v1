@@ -470,12 +470,20 @@ void calculate_Stering() {
         angle3_correction = Angle_Wheel3_pidf.compute_with_error(WrapDegs(target_angle_rear_right - angle_rear_right));
     #endif
 
+    bool angle1_aligned = AtTargetAngle(angle_front, target_angle_front, 5.0);
+    bool angle2_aligned = AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0);
+    bool angle3_aligned = AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
+
     bool all_wheels_aligned = 
-        AtTargetAngle(angle_front, target_angle_front, 5.0) &&
-        AtTargetAngle(angle_rear_left, target_angle_rear_left, 5.0) &&
-        AtTargetAngle(angle_rear_right, target_angle_rear_right, 5.0);
+        angle1_aligned &&
+        angle2_aligned &&
+        angle3_aligned;
 
     if (!all_wheels_aligned && abs(Omega_z) <= (0.05)) {
+        // angle1_correction = angle1_aligned ? 0 : SigNum(angle1_correction) * -400;
+        // angle2_correction = angle2_aligned ? 0 : SigNum(angle2_correction) * -400;
+        // angle3_correction = angle3_aligned ? 0 : SigNum(angle3_correction) * -400;
+
         // ปรับมุมทุกล้อก่อน
         MovePower(
             angle1_correction, -angle1_correction,

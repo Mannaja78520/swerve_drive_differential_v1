@@ -12,7 +12,7 @@ def generate_launch_description():
     bringup_dir = get_package_share_directory('nav2_bringup')
     pkg_dir = get_package_share_directory('differential_drive_v1')
 
-    map_yaml_path = os.path.join(pkg_dir, 'map', 'wrg2024_map.yaml')
+    map_yaml_path = os.path.join(pkg_dir, 'map', 'CMM_MAP/yahboom_map.yaml')
     param_file = os.path.join(pkg_dir, 'param', 'swerve.yaml')
 
     nav2 = IncludeLaunchDescription(

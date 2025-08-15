@@ -62,7 +62,7 @@ def generate_launch_description():
             package='tf2_ros',
             executable='static_transform_publisher',
             name='imu_tf_pub_laser',
-            arguments=['0.0', '0', '0.0', '0.0', '0', '0', 'base_link', 'imu_link']
+            arguments=['0.0', '0', '0.0', '−1.58824962', '0', '0', 'base_link', 'imu_link']
         ),
         
         Node(
@@ -75,7 +75,7 @@ def generate_launch_description():
         ),
         # esp_launch,
         lidar_launch,
-        nav_launch,
+        # nav_launch,
         # Node(
         #     package='differential_drive_v1',
         #     executable='robot_lidar.py',

@@ -52,6 +52,7 @@ amcl_rclcpp_node:
 
 bt_navigator:
   ros__parameters:
+    use_sim_time: false
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
@@ -68,6 +69,7 @@ bt_navigator:
 
 controller_server:
   ros__parameters:
+    use_sim_time: false
     controller_frequency: 20.0
     costmap_update_timeout: 0.30
     min_x_velocity_threshold: 0.001
@@ -77,7 +79,7 @@ controller_server:
     progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
-    use_realtime_priority: true
+    use_realtime_priority: false
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
@@ -171,72 +173,45 @@ controller_server:
 
 local_costmap:
   local_costmap:
-  
     ros__parameters:
       update_frequency: 12.0
       publish_frequency: 10.0
       global_frame: odom
       robot_base_frame: base_link
-      use_sim_time: false
       rolling_window: true
       width: 1
       height: 1
-      resolution: 0.05
+      resolution: 0.015
       robot_radius: 0.105
       footprint_padding: 0.0
       # ใช้ ObstacleLayer + InflationLayer (ตัด VoxelLayer ออกให้เรียบง่าย)
-      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        enabled: true
         observation_sources: scan
         scan:
           topic: /scan
           max_obstacle_height: 2.0
-          clearing: True
-          marking: True
+          clearing: true
+          marking: true
           data_type: "LaserScan"
+          raytrace_max_range: 2.5
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.0
+          obstacle_min_range: 0.0
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 0.07
-        inflation_radius: 0.3       # ช่อง 30 ซม.: 0.045 = margin ~5 ซม./ด้าน
-
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+        cost_scaling_factor: 11.0
+        inflation_radius: 0.042       # ช่อง 30 ซม.: 0.045 = margin ~5 ซม./ด้าน
 
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
 
       always_send_full_costmap: true
-
-      local_costmap_client:
-        ros__parameters:
-          use_sim_time: false
-      local_costmap_rclcpp_node:
-        ros__parameters:
-          use_sim_time: false
-
 
 global_costmap:
   global_costmap:
@@ -246,9 +221,9 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       robot_radius: 0.105
-      resolution: 0.05
+      resolution: 0.03
       track_unknown_space: true
-      plugins: ["static_layer", "obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
 
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -265,27 +240,6 @@ global_costmap:
           obstacle_max_range: 2.5
           obstacle_min_range: 0.0
 
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
-
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -293,22 +247,13 @@ global_costmap:
       # ให้ planner เห็นทางแคบได้ แต่ไม่บีบเกินไป
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 7.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 8.5
+        inflation_radius: 0.055
 
       always_send_full_costmap: true
 
-  global_costmap_client:
-    ros__parameters:
-      use_sim_time: false
-  global_costmap_rclcpp_node:
-    ros__parameters:
-      use_sim_time: false
-
 map_saver:
   ros__parameters:
-    use_sim_time: false
-    yaml_filename: "map.yaml"
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
@@ -316,17 +261,19 @@ map_saver:
 
 planner_server:
   ros__parameters:
+    use_sim_time: false
     expected_planner_frequency: 20.0
     planner_plugins: ["GridBased"]
     costmap_update_timeout: 1.0
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"
-      tolerance: 0.2
+      tolerance: 0.5
       use_astar: false
       allow_unknown: true
 
 smoother_server:
   ros__parameters:
+    use_sim_time: false
     smoother_plugins: ["simple_smoother"]
     simple_smoother:
       plugin: "nav2_smoother::SimpleSmoother"
@@ -336,6 +283,7 @@ smoother_server:
 
 behavior_server:
   ros__parameters:
+    use_sim_time: false
     local_costmap_topic: local_costmap/costmap_raw
     global_costmap_topic: global_costmap/costmap_raw
     local_footprint_topic: local_costmap/published_footprint
@@ -357,13 +305,14 @@ behavior_server:
     robot_base_frame: base_link
     transform_tolerance: 0.1
     simulate_ahead_time: 2.0
-    max_rotational_vel: 0.9
-    min_rotational_vel: 0.7
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
     rotational_acc_lim: 3.2
 
 waypoint_follower:
   ros__parameters:
-    loop_rate: 200
+    use_sim_time: false
+    loop_rate: 20
     stop_on_failure: false
     action_server_result_timeout: 900.0
     waypoint_task_executor_plugin: "wait_at_waypoint"
@@ -374,6 +323,7 @@ waypoint_follower:
 
 velocity_smoother:
   ros__parameters:
+    use_sim_time: false
     smoothing_frequency: 20.0
     scale_velocities: false
     feedback: "OPEN_LOOP"
@@ -388,6 +338,7 @@ velocity_smoother:
 
 collision_monitor:
   ros__parameters:
+    use_sim_time: false
     base_frame_id: "base_link"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_smoothed"
@@ -413,7 +364,7 @@ collision_monitor:
       topic: "scan"
       min_height: 0.0
       max_height: 2.0
-      enabled: true
+      enabled: false
 
 docking_server:
   ros__parameters:

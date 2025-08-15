@@ -8,13 +8,6 @@
 IMU_BNO055 bno055;
 void setup() {
     Serial.begin(115200);
-    pinMode(IMU_RST, OUTPUT);
-    pinMode(IMU_INT, INPUT);
-
-    digitalWrite(IMU_RST, LOW);
-    delay(10);
-    digitalWrite(IMU_RST, HIGH);
-    delay(50);
     
     while (!Serial) {
         delay(10); // wait for serial port to connect. Needed for native USB

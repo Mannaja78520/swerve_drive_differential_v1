@@ -9,25 +9,25 @@
 #define Wheel_Motor_I_Min -Wheel_Motor_I_Max
 #define Wheel_Motor_ERROR_TOLERANCE 0
 
-#define Wheel_Spin_Motor_1_KP 23.2
-#define Wheel_Spin_Motor_1_KI 0.0
-#define Wheel_Spin_Motor_1_KD 0.0
+#define Wheel_Spin_Motor_1_KP 47.2
+#define Wheel_Spin_Motor_1_KI 1.5
+#define Wheel_Spin_Motor_1_KD 0.8
 #define Wheel_Spin_Motor_1_KF 0.0
-#define Wheel_Spin_Motor_1_I_Max 230
+#define Wheel_Spin_Motor_1_I_Max 150
 #define Wheel_Spin_Motor_1_I_Min -Wheel_Spin_Motor_1_I_Max
 
-#define Wheel_Spin_Motor_2_KP 39.4
+#define Wheel_Spin_Motor_2_KP 52.4
 #define Wheel_Spin_Motor_2_KI 1.5
-#define Wheel_Spin_Motor_2_KD 1.5
+#define Wheel_Spin_Motor_2_KD 0.8
 #define Wheel_Spin_Motor_2_KF 0.0
-#define Wheel_Spin_Motor_2_I_Max 500
+#define Wheel_Spin_Motor_2_I_Max 150
 #define Wheel_Spin_Motor_2_I_Min -Wheel_Spin_Motor_2_I_Max
 
-#define Wheel_Spin_Motor_3_KP 21.5
+#define Wheel_Spin_Motor_3_KP 46.5
 #define Wheel_Spin_Motor_3_KI 1.0
-#define Wheel_Spin_Motor_3_KD 1.5
+#define Wheel_Spin_Motor_3_KD 0.8
 #define Wheel_Spin_Motor_3_KF 0.0
-#define Wheel_Spin_Motor_3_I_Max 2500
+#define Wheel_Spin_Motor_3_I_Max 150
 #define Wheel_Spin_Motor_3_I_Min -Wheel_Spin_Motor_3_I_Max
 
 
